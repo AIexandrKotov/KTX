@@ -4,8 +4,12 @@
 
 {$copyright Alexandr Kotov}
 
+{$reference 'System.Drawing.dll'}
+
 ///Модуль для удобной работы с консолью
 unit KTX;
+
+uses System.Drawing;
 
 const
   ///Название модуля
@@ -15,8 +19,15 @@ const
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
+
 ///Возвращает полное имя с версией
 function StrFull := $'{Name} {StrVersion}';
+
+///Возвращает true, если данный байт находится в диапазоне от а до b
+function InRange(self: byte; a, b: byte): boolean; extensionmethod;
+begin
+  Result := (self >= a) and (self <= b);
+end;
 
 type
   
@@ -247,7 +258,7 @@ type
     end;
     
     ///Выводит на экран текст
-    ///Если в качестве аргумента использован цвет консоли, то меняет цвет шрифта на этот цвет-аргумент
+    ///Если в качестве аргумента использован цвет консоли, то меняет цвет текста на этот цвет-аргумент
     public static procedure Draw(params o: array of object);
     begin
       for var i:=0 to o.Length-1 do
@@ -260,14 +271,14 @@ type
     end;
     
     ///Выводит на экран текст и переходит на новую строку
-    ///Если в качестве аргумента использован цвет консоли, то меняет цвет шрифта на этот цвет-аргумент
+    ///Если в качестве аргумента использован цвет консоли, то меняет цвет текста на этот цвет-аргумент
     public static procedure DrawLn(params o: array of object);
     begin
       Draw(o,NewLine);
     end;
     
     ///Выводит на экран текст в позиции x, y
-    ///Если в качестве аргумента использован цвет консоли, то меняет цвет шрифта на этот цвет-аргумент
+    ///Если в качестве аргумента использован цвет консоли, то меняет цвет текста на этот цвет-аргумент
     public static procedure DrawOn(x, y: integer; params o: array of object);
     begin
       Console.SetCursorPosition(x,y);
@@ -275,7 +286,7 @@ type
     end;
     
     ///Выводит на экран текст в позиции x, y и переходит на новую строку
-    ///Если в качестве аргумента использован цвет консоли, то меняет цвет шрифта на этот цвет-аргумент
+    ///Если в качестве аргумента использован цвет консоли, то меняет цвет текста на этот цвет-аргумент
     public static procedure DrawLnOn(x, y: integer; params o: array of object);
     begin
       Console.SetCursorPosition(x,y);
@@ -507,6 +518,92 @@ type
   
   ///Содержит методы для рисования
   Drawing = static class
+    public static function RGBToColor(r, g, b: byte): KTX.Color;
+    begin
+      if (r.InRange(0,64)) and (g.InRange(0,64)) and (b.InRange(0,64)) then Result:=KTX.Black;
+      if (r.InRange(0,64)) and (g.InRange(65,159)) and (b.InRange(65,159)) then Result:=KTX.DarkGray;
+      if (r.InRange(160,223)) and (g.InRange(160,223)) and (b.InRange(160,223)) then Result:=KTX.Gray;
+      if (r.InRange(224,255)) and (g.InRange(224,255)) and (b.InRange(224,255)) then Result:=KTX.White;
+      
+      if (r.InRange(65,191)) and (g.InRange(0,64)) and (b.InRange(0,64)) then Result:=KTX.DarkRed;
+      if (r.InRange(0,64)) and (g.InRange(65,191)) and (b.InRange(0,64)) then Result:=KTX.DarkGreen;
+      if (r.InRange(0,64)) and (g.InRange(0,64)) and (b.InRange(65,191)) then Result:=KTX.DarkBlue;
+      
+      if (r.InRange(0,64)) and (g.InRange(65,191)) and (b.InRange(65,191)) then Result:=KTX.DarkCyan;
+      if (r.InRange(65,191)) and (g.InRange(0,64)) and (b.InRange(65,191)) then Result:=KTX.DarkMagenta;
+      if (r.InRange(65,191)) and (g.InRange(65,191)) and (b.InRange(0,64)) then Result:=KTX.DarkYellow;
+      
+      if (r.InRange(192,255)) and (g.InRange(0,64)) and (b.InRange(0,64)) then Result:=KTX.Red;
+      if (r.InRange(0,64)) and (g.InRange(192,255)) and (b.InRange(0,64)) then Result:=KTX.Green;
+      if (r.InRange(0,64)) and (g.InRange(0,64)) and (b.InRange(192,255)) then Result:=KTX.Blue;
+      
+      if (r.InRange(0,64)) and (g.InRange(192,255)) and (b.InRange(192,255)) then Result:=KTX.Cyan;
+      if (r.InRange(192,255)) and (g.InRange(0,64)) and (b.InRange(192,255)) then Result:=KTX.Magenta;
+      if (r.InRange(192,255)) and (g.InRange(192,255)) and (b.InRange(0,64)) then Result:=KTX.Yellow;
+    end;
+    
+    ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
+    public static function ARGBPixelToDrawBox(x, y: integer; bg: Color; a, r, g, b: byte): DrawBox;
+    const
+      //░▒▓█
+      Context = ' .:;t08SX%&#@';
+    begin
+      Result := new DrawBox();
+      
+      Result.PosX := x;
+      Result.PosY := y;
+      Result.Symbol:=' ';
+      Result.Back:=RGBToColor(r,g,b);
+      
+      case bg of //ToDo this
+        Color.White: if (r = 255) and (g = 255) and (b = 255) then Result.Symbol := 'T';
+        Color.Black: if (r = 0) and (g = 0) and (b = 0) then Result.Symbol := 'T';
+      end;
+      
+    end;
+    
+    ///Преобразует файл-рисунок в экземпляр класса DrawBoxBlock
+    public static function BitMapToDrawBoxBlock(bmpname: string): DrawBoxBlock;
+    begin
+      var b := new Bitmap(bmpname);
+      
+      Result := new DrawBoxBlock();
+      Result.SizeX := b.Width;
+      Result.SizeY := b.Height;
+      
+      var Draws := new List<DrawBox>;
+      var Colors := new List<System.Drawing.Color>;
+      
+      for var i:=0 to (b.Width)*(b.Height) - 2 do
+      begin
+        var xx := i mod b.Width;
+        var yy := i div b.Width;
+        Colors += b.GetPixel(xx,yy);
+      end;
+      
+      var bgrnd0 := System.Drawing.Color.FromArgb(Colors.GroupBy(x -> x.ToArgb).MaxBy(x -> x.Count).Key);
+      var bgrnd := RGBToColor(bgrnd0.A, bgrnd0.G, bgrnd0.B);
+      Result.Background := bgrnd;
+      
+      for var i:=0 to (b.Width)*(b.Height) - 2 do
+      begin
+        var xx := i mod b.Width;
+        var yy := i div b.Width;
+        var cc := b.GetPixel(xx,yy);
+        
+        Draws+=ARGBPixelToDrawBox(xx,yy, bgrnd, cc.A, cc.R, cc.G, cc.B);
+      end;
+      
+      Draws.RemoveAll(x -> (x = nil) or (x.Symbol = 'T'));
+      Result.Draws := Draws.ToArray;
+    end;
+    
+    ///Преобразует файл-рисунок bmpname в файл .ktx
+    public static procedure BitMapToKTXFile(bmpname, ktxname: string);
+    begin
+      BitMapToDrawBoxBlock(bmpname).WriteKTXFile(ktxname);
+    end;
+    
     ///Возвращает левый верхний угол окна рисования
     public static function GetStartPos(a: DrawBoxBlock): (integer, integer);
     begin
