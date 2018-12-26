@@ -374,7 +374,10 @@ type
     
     //public static function Parse(s: string): DrawBox := new DrawBox(s);
     
-    public function ToString: string; override := $'{Symbol}{ConvertColor.ColorToHex(Back)}{ConvertColor.ColorToHex(Fore)}';
+    public function ToString: string; override;
+    begin
+      Result := $'({PosX},{PosY},{Back},{Fore},{Symbol})';
+    end;
   end;
   
   DrawBoxFile = record
