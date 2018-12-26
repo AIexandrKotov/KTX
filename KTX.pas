@@ -15,7 +15,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 0; Build: 1);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 0; Build: 2);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
