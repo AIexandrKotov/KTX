@@ -11,9 +11,11 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor: integer; end = (Major: 2; Minor: 0);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 0; Build: 1);
 
-function StrVersion := $'{version.Major}.{version.Minor}';
+///Возвращает строковое представление о текущей версии модуля
+function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
+///Возвращает полное имя с версией
 function StrFull := $'{Name} {StrVersion}';
 
 type
@@ -57,21 +59,26 @@ const
   
 type
 
+  ///Класс, содержащий методы для работы с консолью
   Console = static class
     private const Err1: string = 'Window size too small';
     
+    ///Изменяет название окна консоли
     public static procedure SetTitle(s: string);
     begin
       System.Console.Title:=s;
     end;
     
+    ///Название консольного окна
     public static property Title: string read System.Console.Title write SetTitle;
     
+    ///Включает видимость курсора
     internal static procedure Pre;
     begin
       System.Console.CursorVisible:=true;
     end;
     
+    ///Отключает видимость курсора
     internal static procedure After;
     begin
       System.Console.CursorVisible:=false;
@@ -139,8 +146,9 @@ type
     public static property MaxWidth: integer read System.Console.LargestWindowWidth;
     
     ///Устанавливает положение курсора
-    public static procedure SetCursorPosition(x,y: integer) := System.Console.SetCursorPosition(x,y);
+    public static procedure SetCursorPosition(x, y: integer) := System.Console.SetCursorPosition(x,y);
     
+    ///Устанавливает положение курсора
     public static procedure SetPos(x, y: integer) := System.Console.SetCursorPosition(x, y);
     
     ///Очищает окно консоли, заливая его текущем цветом бэкграунда
@@ -238,6 +246,8 @@ type
       IsInit:=true;
     end;
     
+    ///Выводит на экран текст
+    ///Если в качестве аргумента использован цвет консоли, то меняет цвет шрифта на этот цвет-аргумент
     public static procedure Draw(params o: array of object);
     begin
       for var i:=0 to o.Length-1 do
@@ -248,20 +258,32 @@ type
         end;
       end;
     end;
-  
+    
+    ///Выводит на экран текст и переходит на новую строку
+    ///Если в качестве аргумента использован цвет консоли, то меняет цвет шрифта на этот цвет-аргумент
+    public static procedure DrawLn(params o: array of object);
+    begin
+      Draw(o,NewLine);
+    end;
+    
+    ///Выводит на экран текст в позиции x, y
+    ///Если в качестве аргумента использован цвет консоли, то меняет цвет шрифта на этот цвет-аргумент
     public static procedure DrawOn(x, y: integer; params o: array of object);
     begin
       Console.SetCursorPosition(x,y);
       Draw(o);
     end;
     
+    ///Выводит на экран текст в позиции x, y и переходит на новую строку
+    ///Если в качестве аргумента использован цвет консоли, то меняет цвет шрифта на этот цвет-аргумент
     public static procedure DrawLnOn(x, y: integer; params o: array of object);
     begin
       Console.SetCursorPosition(x,y);
-      writeln(o);
+      DrawLn(o);
     end;
   end;
-
+  
+  ///Представляет класс псевдоокна
   Block = class
     ///--
     private const Zero: integer = integer.MinValue;
@@ -348,21 +370,36 @@ type
       Console.After;
     end;
     
+    ///Возвращает Input текущего псевдоокна
     public function ToString: string; override := _input;
   end;
   
+  ///Класс, содержащий методы преобразования цвета консоли в целые десятичные и шестнадцатиричные числа и обратно
   ConvertColor = static class
+    ///Переводит цвет консоли в целое число (byte)
     public static function ColorToInt(a: Color): byte := Ord(a);
+    ///Переводит целое число (byte) в цвет консоли
     public static function IntToColor(a: byte): Color := Color(integer(a));
-    public static function ColorToHex(a: Color): string := ColorToInt(a).ToString('X');
-    public static function HexToColor(s: string): Color := IntToColor(System.Convert.ToInt32(s,16));
+    ///Переводит цвет консоли в шестнадцатиричное число
+    public static function ColorToHex(a: Color): char := ColorToInt(a).ToString('X')[1];
+    ///Переводит шестнадцатиричное число в цвет консоли
+    public static function HexToColor(s: char): Color := IntToColor(System.Convert.ToInt32(s,16));
   end;
   
+  ///Представляет клетку консоли
   DrawBox = class
-    public PosX, PosY: integer;
-    public Back, Fore: Color;
+    ///Положение клетки по X (ширине)
+    public PosX: integer;
+    ///Положение клетки по Y (высоте)
+    public PosY: integer;
+    ///Цвет BackgroundColor клетки
+    public Back: Color;
+    ///Цвет ForegroundColor клетки
+    public Fore: Color;
+    ///Символ, находящийся в клетке
     public Symbol: char;
     
+    ///Создаёт новый экземпляр класса DrawBox
     public constructor (x,y: integer; c: char; B, F: Color);
     begin
       PosX:=x;
@@ -374,20 +411,25 @@ type
     
     //public static function Parse(s: string): DrawBox := new DrawBox(s);
     
+    ///Возвращает строковое представление текущего экземпляра класса
     public function ToString: string; override;
     begin
       Result := $'({PosX},{PosY},{Back},{Fore},{Symbol})';
     end;
   end;
   
+  //Структура клетки для записи в файл или чтения из файла
+  ///--
   DrawBoxFile = record
     x, y: integer;
     c: char;
     b, f: byte;
     
+    ///Создаёт новую запись DrawBoxFile
     public constructor;
     begin end;
     
+    ///Создаёт новую запись DrawBoxFile из экземпляра класса DrawBox
     public constructor (a: DrawBox);
     begin
       x:=a.PosX;
@@ -397,17 +439,25 @@ type
       f:=ConvertColor.ColorToInt(a.Fore);
     end;
     
+    ///Возвращает экземпляр класса DrawBox, созданный из текущей записи DrawBoxFile
     public function ToDrawBox: DrawBox;
     begin
       Result:=new DrawBox(x,y,c,ConvertColor.IntToColor(b),ConvertColor.IntToColor(f));
     end;
   end;
   
+  ///Преставляет окно, в котором проводится рисование
   DrawBoxBlock = class
-    public SizeX, SizeY: integer;
+    ///Ширина окна рисования
+    public SizeX: integer;
+    ///Высота окна рисования
+    public SizeY: integer;
+    ///Основной цвет окна
     public Background: Color;
+    ///Массив клеток консоли
     public Draws: array of DrawBox;
     
+    ///Создаёт новый экземпляр клссса DrawBoxBlock
     public constructor (x, y: integer; b: Color; arr: array of DrawBox);
     begin
       SizeX:=x;
@@ -416,6 +466,7 @@ type
       Draws:=arr;
     end;
     
+    ///Создаёт новый экземпляр клссса DrawBoxBlock, загружая его из файла name
     public constructor (name: string);
     begin
       var f: file;
@@ -437,6 +488,7 @@ type
       f.Close;
     end;
     
+    ///Сохраняет текущий экземпляр класса DrawBoxBlock в файл name
     public procedure WriteKTXFile(name: string);
     begin
       var f: file;
@@ -453,7 +505,9 @@ type
     end;
   end;
   
+  ///Содержит методы для рисования
   Drawing = static class
+    ///Возвращает левый верхний угол окна рисования
     public static function GetStartPos(a: DrawBoxBlock): (integer, integer);
     begin
       var x:=abs(a.SizeX-Console.Width) div 2;
@@ -504,6 +558,7 @@ type
       end;
     end;
     
+    ///Быстрый вывод по цветам заднего фона консоли
     ///Медленнее обычного HexDraw, но окажется гораздо быстрее, если в DrawBox'ах используется один и тот же цвет текста
     public static procedure HexDrawWithSearch(a: DrawBoxBlock);
     begin
