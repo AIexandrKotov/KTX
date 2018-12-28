@@ -122,10 +122,22 @@ type
     private static _ctrue: Color = DarkGreen;
     private static _cfalse: Color = Red;
     
-    ///Действительное значение цвета бэкграунда консоли
-    public static property RealBack: Color read System.Console.BackgroundColor;
-    ///Действительное значение цвета текста консоли
-    public static property RealFore: Color read System.Console.ForegroundColor;
+    ///Задаёт действительное значение цвета фона
+    public static procedure SetRealBackColor(a: Color);
+    begin
+      System.Console.BackgroundColor := a;
+    end;
+    
+    ///Задаёт действительное значение цвета текста
+    public static procedure SetRealForeColor(a: Color);
+    begin
+      System.Console.ForegroundColor := a;
+    end;
+    
+    ///Задаёт или возвращает действительное значение цвета фона консоли
+    public static property RealBack: Color read System.Console.BackgroundColor write SetRealBackColor;
+    ///Задаёт или возвращает действительное значение цвета текста консоли
+    public static property RealFore: Color read System.Console.ForegroundColor write SetRealForeColor;
     
     ///Стандартное значение цвета текста консоли
     public static property ColorFore: Color read _cfore;
