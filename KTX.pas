@@ -10,7 +10,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 0; Build: 17);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 0; Build: 18);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -395,7 +395,6 @@ type
     public function ToString: string; override := _input;
   end;
   
-  
   ///Представляет класс псевдоокна, который управляется клавишами
   KeyBlock = class
     private _status: boolean;
@@ -429,15 +428,19 @@ type
       Console.Resize;
     end;
     
+    ///Изменяет значение параметра блока id на значение value
     public procedure SetStage(id, value: integer) := _stage[id] := value;
     
+    ///Изменяет размер параметров блока
     public procedure SetSize(length: integer) := SetLength(_stage,length);
     
+    ///Закрывает данный блок
     public procedure Close();
     begin
       _status := false;
     end;
     
+    ///Создаёт новый экземпляр класс KeyBlock
     public constructor;
     begin
       if not Console.IsInit then Console.Init;
@@ -446,6 +449,7 @@ type
       _stage[0] := 1;
     end;
     
+    ///Создаёт новый экземпляр с указанным числом параметров
     public constructor(a: integer);
     begin
       if not Console.IsInit then Console.Init;
