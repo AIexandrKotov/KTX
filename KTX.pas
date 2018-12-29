@@ -1,9 +1,4 @@
 ﻿{$apptype console}
-{$product KTX Console Manager 2.0}
-{$company Kotov Projects}
-
-{$copyright Alexandr Kotov}
-
 {$reference 'System.Drawing.dll'}
 
 ///Модуль для удобной работы с консолью
