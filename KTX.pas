@@ -562,6 +562,7 @@ type
       Result.Symbol:=' ';
       Result.Back:=RGBToColor(r,g,b);
       
+      try
         case Result.Back of
           Color.Black:
           begin
@@ -708,6 +709,8 @@ type
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
         end;
+        except on System.Exception do;
+      end;
       
       case bg of
         Color.Black: if (r = 0) and (g = 0) and (b = 0) then Result.Symbol := 'T';
