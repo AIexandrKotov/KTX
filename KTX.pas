@@ -28,6 +28,9 @@ type
   
   ///Тип цвета консоли
   Color = System.ConsoleColor;
+  
+  ///Тип клавиши консоли
+  Key = System.ConsoleKey;
 
 const
   ///Чёрный
@@ -338,7 +341,7 @@ type
     end;
     
     ///Создаёт новый экземпляр класса KTX.Block
-    public constructor Create();
+    public constructor();
     begin
       if not Console.IsInit then Console.Init;
       _input:=Null;
@@ -390,6 +393,49 @@ type
     
     ///Возвращает Input текущего псевдоокна
     public function ToString: string; override := _input;
+  end;
+  
+  ///Представляет класс псевдоокна, который управляется клавишами
+  KeyBlock = class
+    private _status: boolean;
+    private _stage: array of integer;
+    private _output: System.ConsoleKeyInfo;
+    
+    public property Status: boolean read _status;
+    
+    public property Stage: array of integer read _stage;
+    
+    public property Output: System.ConsoleKeyInfo read _output;
+    
+    public procedure Read;
+    begin
+      _output := System.Console.ReadKey(true);
+    end;
+    
+    public procedure Update;
+    begin
+      Console.Resize;
+    end;
+    
+    public procedure SetStage(id, value: integer) := _stage[id] := value;
+    
+    public procedure SetSize(length: integer) := SetLength(_stage,length);
+    
+    public procedure Close();
+    begin
+      _status := false;
+    end;
+    
+    public constructor;
+    begin
+      if not Console.IsInit then Console.Init;
+      _status := true;
+      _stage := new integer[1];
+      _stage[0] := 1;
+    end;
+    
+    ///--
+    public static function operator implicit(a: KeyBlock): boolean := a._status;
   end;
   
   ///Класс, содержащий методы преобразования цвета консоли в целые десятичные и шестнадцатиричные числа и обратно
