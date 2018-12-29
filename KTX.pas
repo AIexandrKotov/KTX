@@ -10,7 +10,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 0; Build: 2);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 0; Build: 17);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -28,6 +28,9 @@ type
   
   ///Тип цвета консоли
   Color = System.ConsoleColor;
+  
+  ///Тип клавиши консоли
+  Key = System.ConsoleKey;
 
 const
   ///Чёрный
@@ -392,6 +395,69 @@ type
     public function ToString: string; override := _input;
   end;
   
+  
+  ///Представляет класс псевдоокна, который управляется клавишами
+  KeyBlock = class
+    private _status: boolean;
+    private _stage: array of integer;
+    private _output: System.ConsoleKeyInfo;
+    
+    ///Состояние блока
+    public property Status: boolean read _status;
+    
+    ///Целочисленные параметры блока
+    public property Stage: array of integer read _stage;
+    
+    ///Возвращает информацию о введённой клавише
+    public property Input: System.ConsoleKeyInfo read _output;
+    
+    ///Чтение клавиши
+    public procedure Read;
+    begin
+      _output := System.Console.ReadKey(true);
+    end;
+    
+    ///Обновляет консоль
+    public procedure Update;
+    begin
+      Console.Resize;
+    end;
+    
+    ///Обновляет консоль
+    public procedure Reload;
+    begin
+      Console.Resize;
+    end;
+    
+    public procedure SetStage(id, value: integer) := _stage[id] := value;
+    
+    public procedure SetSize(length: integer) := SetLength(_stage,length);
+    
+    public procedure Close();
+    begin
+      _status := false;
+    end;
+    
+    public constructor;
+    begin
+      if not Console.IsInit then Console.Init;
+      _status := true;
+      _stage := new integer[1];
+      _stage[0] := 1;
+    end;
+    
+    public constructor(a: integer);
+    begin
+      if not Console.IsInit then Console.Init;
+      _status := true;
+      _stage := new integer[a];
+      for var i:=0 to _stage.Length-1 do _stage[i] := 1;
+    end;
+    
+    ///--
+    public static function operator implicit(a: KeyBlock): boolean := a._status;
+  end;
+  
   ///Класс, содержащий методы преобразования цвета консоли в целые десятичные и шестнадцатиричные числа и обратно
   ConvertColor = static class
     ///Переводит цвет консоли в целое число (byte)
@@ -404,9 +470,16 @@ type
     public static function HexToColor(s: char): Color := IntToColor(System.Convert.ToInt32(s,16));
   end;
   
-  ///Параметры консольного цвета
+  //Параметры консольного цвета
+  ///--
   RGBColor = record
-    public R, G, B: byte;
+    ///Красный компонент данного цвета
+    public R: byte;
+    ///Зелёный компонент данного цвета
+    public G: byte;
+    ///Синий компонент данного цвета
+    public B: byte;
+    ///Консольный цвет данного цвета
     public ConsoleColor: Color;
     
     private constructor := exit;
@@ -420,6 +493,7 @@ type
     end;
   end;
   
+  ///Тип конвертации RGB в ConsoleColor
   RGBToColorConvertType = (old, &new);
   
   ///Класс, содержащий значения цветов консоли в виде RGB
@@ -443,25 +517,42 @@ type
     private static _yellow := new RGBColor(255,255,0,Color.Yellow);
     private static _magenta := new RGBColor(255,0,255,Color.Magenta);
     
+    ///RGB Чёрного цвета консоли
     public static property Black: RGBColor read _black;
+    ///RGB Тёмно-серого цвета консоли
     public static property DarkGray: RGBColor read _darkgray;
+    ///RGB Серого цвета консоли
     public static property Gray: RGBColor read _gray;
+    ///RGB Белого цвета консоли
     public static property White: RGBColor read _white;
     
+    ///RGB Тёмно-синего цвета консоли
     public static property DarkBlue: RGBColor read _darkblue;
+    ///RGB Тёмно-зелёного цвета консоли
     public static property DarkGreen: RGBColor read _darkgreen;
+    ///RGB Тёмно-красного цвета консоли
     public static property DarkRed: RGBColor read _darkred;
+    ///RGB Тёмно-бирюзового цвета консоли
     public static property DarkCyan: RGBColor read _darkcyan;
+    ///RGB Тёмно-жёлтого цвета консоли
     public static property DarkYellow: RGBColor read _darkyellow;
+    ///RGB Тёмно-фиолетового цвета консоли
     public static property DarkMagenta: RGBColor read _darkmagenta;
     
+    ///RGB Синего цвета консоли
     public static property Blue: RGBColor read _blue;
+    ///RGB Зелёного цвета консоли
     public static property Green: RGBColor read _green;
+    ///RGB Красного цвета консоли
     public static property Red: RGBColor read _red;
+    ///RGB Бирюзового цвета консоли
     public static property Cyan: RGBColor read _cyan;
+    ///RGB Жёлтого цвета консоли
     public static property Yellow: RGBColor read _yellow;
+    ///RGB Фиолетового цвета консоли
     public static property Magenta: RGBColor read _magenta;
     
+    ///Новое преобразование
     public static function FromRGB(R, G, B: byte): Color;
     begin
       //Чёрный цвет
@@ -525,6 +616,7 @@ type
       or ((R.InRange(0,95)) and (G.InRange(160,255)) and (B.InRange(128,255))) then Result := _darkcyan.ConsoleColor;
     end;
     
+    ///Преобразование версии 2.0.2
     public static function OldRGBToColor(r, g, b: byte): KTX.Color;
     begin
       if (r.InRange(0,63)) and (g.InRange(0,63)) and (b.InRange(0,63)) then Result:=KTX.Black;
@@ -549,6 +641,7 @@ type
       if (r.InRange(192,255)) and (g.InRange(192,255)) and (b.InRange(0,63)) then Result:=KTX.Yellow;
     end;
     
+    ///Преобразует RGB в ConsoleColor
     public static function RGBToColor(a: RGBToColorConvertType; r, g, b: byte): Color;
     begin
       case a of
