@@ -570,7 +570,7 @@ type
             var GG := Round(g / 4);
             var BB := Round(b / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR, GG, BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR, GG, BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.DarkGray:
@@ -579,7 +579,7 @@ type
             var GG := Round((g-63) / 4);
             var BB := Round((b-63) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.Gray:
@@ -588,7 +588,7 @@ type
             var GG := Round((g-159) / 4);
             var BB := Round((b-159) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.DarkRed:
@@ -597,7 +597,7 @@ type
             var GG := Round((g+1) / 4);
             var BB := Round((b+1) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.DarkBlue:
@@ -606,7 +606,7 @@ type
             var GG := Round((g+1) / 4);
             var BB := Round((b-63) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.DarkGreen:
@@ -615,7 +615,7 @@ type
             var GG := Round((g-63) / 4);
             var BB := Round((b+1) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.DarkCyan:
@@ -624,7 +624,7 @@ type
             var GG := Round((g-63) / 4);
             var BB := Round((b-63) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.DarkMagenta:
@@ -633,7 +633,7 @@ type
             var GG := Round((g+1) / 4);
             var BB := Round((b-63) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.DarkYellow:
@@ -642,7 +642,7 @@ type
             var GG := Round((g-63) / 4);
             var BB := Round((b+1) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.Red:
@@ -651,7 +651,7 @@ type
             var GG := Round((g+1) / 4);
             var BB := Round((b+1) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.Blue:
@@ -660,7 +660,7 @@ type
             var GG := Round((g+1) / 4);
             var BB := Round((b-191) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.Green:
@@ -669,7 +669,7 @@ type
             var GG := Round((g-191) / 4);
             var BB := Round((b+1) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.Cyan:
@@ -678,7 +678,7 @@ type
             var GG := Round((g-191) / 4);
             var BB := Round((b-191) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.Magenta:
@@ -687,7 +687,7 @@ type
             var GG := Round((g+1) / 4);
             var BB := Round((b-191) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.Yellow:
@@ -696,7 +696,7 @@ type
             var GG := Round((g-191) / 4);
             var BB := Round((b+1) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
           Color.White:
@@ -705,7 +705,7 @@ type
             var GG := Round((g-191) / 4);
             var BB := Round((b-191) / 4);
             if (RR <= 16) and (GG <= 16) and (BB <= 16) then
-              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Max)];
             Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
           end;
         end;
