@@ -527,33 +527,33 @@ type
   Drawing = static class
     public static function RGBToColor(r, g, b: byte): KTX.Color;
     begin
-      if (r.InRange(0,64)) and (g.InRange(0,64)) and (b.InRange(0,64)) then Result:=KTX.Black;
-      if (r.InRange(0,64)) and (g.InRange(65,159)) and (b.InRange(65,159)) then Result:=KTX.DarkGray;
-      if (r.InRange(160,223)) and (g.InRange(160,223)) and (b.InRange(160,223)) then Result:=KTX.Gray;
-      if (r.InRange(224,255)) and (g.InRange(224,255)) and (b.InRange(224,255)) then Result:=KTX.White;
+      if (r.InRange(0,63)) and (g.InRange(0,63)) and (b.InRange(0,63)) then Result:=KTX.Black;
+      if (r.InRange(64,159)) and (g.InRange(64,159)) and (b.InRange(64,159)) then Result:=KTX.DarkGray;
+      if (r.InRange(160,222)) and (g.InRange(160,222)) and (b.InRange(160,222)) then Result:=KTX.Gray;
+      if (r.InRange(223,255)) and (g.InRange(223,255)) and (b.InRange(223,255)) then Result:=KTX.White;
       
-      if (r.InRange(65,191)) and (g.InRange(0,64)) and (b.InRange(0,64)) then Result:=KTX.DarkRed;
-      if (r.InRange(0,64)) and (g.InRange(65,191)) and (b.InRange(0,64)) then Result:=KTX.DarkGreen;
-      if (r.InRange(0,64)) and (g.InRange(0,64)) and (b.InRange(65,191)) then Result:=KTX.DarkBlue;
+      if (r.InRange(64,191)) and (g.InRange(0,63)) and (b.InRange(0,63)) then Result:=KTX.DarkRed;
+      if (r.InRange(0,63)) and (g.InRange(64,191)) and (b.InRange(0,63)) then Result:=KTX.DarkGreen;
+      if (r.InRange(0,63)) and (g.InRange(0,63)) and (b.InRange(64,191)) then Result:=KTX.DarkBlue;
       
-      if (r.InRange(0,64)) and (g.InRange(65,191)) and (b.InRange(65,191)) then Result:=KTX.DarkCyan;
-      if (r.InRange(65,191)) and (g.InRange(0,64)) and (b.InRange(65,191)) then Result:=KTX.DarkMagenta;
-      if (r.InRange(65,191)) and (g.InRange(65,191)) and (b.InRange(0,64)) then Result:=KTX.DarkYellow;
+      if (r.InRange(0,63)) and (g.InRange(64,191)) and (b.InRange(64,191)) then Result:=KTX.DarkCyan;
+      if (r.InRange(64,191)) and (g.InRange(0,63)) and (b.InRange(64,191)) then Result:=KTX.DarkMagenta;
+      if (r.InRange(64,191)) and (g.InRange(64,191)) and (b.InRange(0,63)) then Result:=KTX.DarkYellow;
       
-      if (r.InRange(192,255)) and (g.InRange(0,64)) and (b.InRange(0,64)) then Result:=KTX.Red;
-      if (r.InRange(0,64)) and (g.InRange(192,255)) and (b.InRange(0,64)) then Result:=KTX.Green;
-      if (r.InRange(0,64)) and (g.InRange(0,64)) and (b.InRange(192,255)) then Result:=KTX.Blue;
+      if (r.InRange(192,255)) and (g.InRange(0,63)) and (b.InRange(0,63)) then Result:=KTX.Red;
+      if (r.InRange(0,63)) and (g.InRange(192,255)) and (b.InRange(0,63)) then Result:=KTX.Green;
+      if (r.InRange(0,63)) and (g.InRange(0,63)) and (b.InRange(192,255)) then Result:=KTX.Blue;
       
-      if (r.InRange(0,64)) and (g.InRange(192,255)) and (b.InRange(192,255)) then Result:=KTX.Cyan;
-      if (r.InRange(192,255)) and (g.InRange(0,64)) and (b.InRange(192,255)) then Result:=KTX.Magenta;
-      if (r.InRange(192,255)) and (g.InRange(192,255)) and (b.InRange(0,64)) then Result:=KTX.Yellow;
+      if (r.InRange(0,63)) and (g.InRange(192,255)) and (b.InRange(192,255)) then Result:=KTX.Cyan;
+      if (r.InRange(192,255)) and (g.InRange(0,63)) and (b.InRange(192,255)) then Result:=KTX.Magenta;
+      if (r.InRange(192,255)) and (g.InRange(192,255)) and (b.InRange(0,63)) then Result:=KTX.Yellow;
     end;
     
     ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
     public static function ARGBPixelToDrawBox(x, y: integer; bg: Color; a, r, g, b: byte): DrawBox;
     const
-      //░▒▓█
-      Context = ' .:;t08SX%&#@';
+      ///Длина обязательно 16
+      Context = ' .:;t08SX%&#@░▒▓';
     begin
       Result := new DrawBox();
       
@@ -562,11 +562,171 @@ type
       Result.Symbol:=' ';
       Result.Back:=RGBToColor(r,g,b);
       
-      case bg of //ToDo this
-        Color.White: if (r = 255) and (g = 255) and (b = 255) then Result.Symbol := 'T';
-        Color.Black: if (r = 0) and (g = 0) and (b = 0) then Result.Symbol := 'T';
-      end;
+        case Result.Back of
+          Color.Black:
+          begin
+            var RR := Round(r / 4);
+            var GG := Round(g / 4);
+            var BB := Round(b / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR, GG, BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.DarkGray:
+          begin
+            var RR := Round((r-63) / 4);
+            var GG := Round((g-63) / 4);
+            var BB := Round((b-63) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.Gray:
+          begin
+            var RR := Round((r-159) / 4);
+            var GG := Round((g-159) / 4);
+            var BB := Round((b-159) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.DarkRed:
+          begin
+            var RR := Round((r-63) / 4);
+            var GG := Round((g+1) / 4);
+            var BB := Round((b+1) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.DarkBlue:
+          begin
+            var RR := Round((r+1) / 4);
+            var GG := Round((g+1) / 4);
+            var BB := Round((b-63) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.DarkGreen:
+          begin
+            var RR := Round((r+1) / 4);
+            var GG := Round((g-63) / 4);
+            var BB := Round((b+1) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.DarkCyan:
+          begin
+            var RR := Round((r+1) / 4);
+            var GG := Round((g-63) / 4);
+            var BB := Round((b-63) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.DarkMagenta:
+          begin
+            var RR := Round((r-63) / 4);
+            var GG := Round((g+1) / 4);
+            var BB := Round((b-63) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.DarkYellow:
+          begin
+            var RR := Round((r-63) / 4);
+            var GG := Round((g-63) / 4);
+            var BB := Round((b+1) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.Red:
+          begin
+            var RR := Round((r-191) / 4);
+            var GG := Round((g+1) / 4);
+            var BB := Round((b+1) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.Blue:
+          begin
+            var RR := Round((r+1) / 4);
+            var GG := Round((g+1) / 4);
+            var BB := Round((b-191) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.Green:
+          begin
+            var RR := Round((r+1) / 4);
+            var GG := Round((g-191) / 4);
+            var BB := Round((b+1) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.Cyan:
+          begin
+            var RR := Round((r+1) / 4);
+            var GG := Round((g-191) / 4);
+            var BB := Round((b-191) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.Magenta:
+          begin
+            var RR := Round((r-191) / 4);
+            var GG := Round((g+1) / 4);
+            var BB := Round((b-191) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.Yellow:
+          begin
+            var RR := Round((r-191) / 4);
+            var GG := Round((g-191) / 4);
+            var BB := Round((b+1) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+          Color.White:
+          begin
+            var RR := Round((r-191) / 4);
+            var GG := Round((g-191) / 4);
+            var BB := Round((b-191) / 4);
+            if (RR <= 16) and (GG <= 16) and (BB <= 16) then
+              Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
+            Result.Fore := RGBToColor(RR*4,GG*4,BB*4);
+          end;
+        end;
       
+      case bg of
+        Color.Black: if (r = 0) and (g = 0) and (b = 0) then Result.Symbol := 'T';
+        Color.DarkGray: if (r = 128) and (g = 128) and (b = 128) then Result.Symbol := 'T';
+        Color.Gray: if (r = 192) and (g = 192) and (b = 192) then Result.Symbol := 'T';
+        Color.White: if (r = 255) and (g = 255) and (b = 255) then Result.Symbol := 'T';
+        Color.DarkBlue: if (r = 0) and (g = 0) and (b = 128) then Result.Symbol := 'T';
+        Color.DarkGreen: if (r = 0) and (g = 128) and (b = 0) then Result.Symbol := 'T';
+        Color.DarkCyan: if (r = 0) and (g = 128) and (b = 128) then Result.Symbol := 'T';
+        Color.DarkRed: if (r = 128) and (g = 0) and (b = 0) then Result.Symbol := 'T';
+        Color.DarkMagenta: if (r = 128) and (g = 0) and (b = 128) then Result.Symbol := 'T';
+        Color.DarkYellow: if (r = 128) and (g = 128) and (b = 0) then Result.Symbol := 'T';
+        Color.Blue: if (r = 0) and (g = 0) and (b = 255) then Result.Symbol := 'T';
+        Color.Green: if (r = 0) and (g = 255) and (b = 0) then Result.Symbol := 'T';
+        Color.Cyan: if (r = 0) and (g = 255) and (b = 255) then Result.Symbol := 'T';
+        Color.Red: if (r = 255) and (g = 0) and (b = 0) then Result.Symbol := 'T';
+        Color.Magenta: if (r = 255) and (g = 0) and (b = 255) then Result.Symbol := 'T';
+        Color.Yellow: if (r = 255) and (g = 255) and (b = 0) then Result.Symbol := 'T';
+      end;
     end;
     
     ///Преобразует файл-рисунок в экземпляр класса DrawBoxBlock
