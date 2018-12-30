@@ -10,7 +10,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 20);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 21);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -81,18 +81,6 @@ type
     ///Название консольного окна
     public static property Title: string read System.Console.Title write SetTitle;
     
-    ///Включает видимость курсора
-    internal static procedure Pre;
-    begin
-      System.Console.CursorVisible:=true;
-    end;
-    
-    ///Отключает видимость курсора
-    internal static procedure After;
-    begin
-      System.Console.CursorVisible:=false;
-    end;
-    
     private static IsInit: boolean;
     
     private static _MinimalWidth: integer = 100;
@@ -119,6 +107,23 @@ type
     private static _cerr: Color = Red;
     private static _ctrue: Color = DarkGreen;
     private static _cfalse: Color = Red;
+    
+    private static procedure SetCursorVisible(a: boolean) := System.Console.CursorVisible := a;
+    
+    ///Возвращает или задает видимость курсора
+    public static property CursorVisible: boolean read System.Console.CursorVisible write SetCursorVisible;
+    
+    ///Действия, выполняемые перед чтением в блоке
+    private static procedure Pre;
+    begin
+      System.Console.CursorVisible:=true;
+    end;
+    
+    ///Действия, выполняемые после чтения в блоке
+    private static procedure After;
+    begin
+      System.Console.CursorVisible:=false;
+    end;
     
     ///Задаёт действительное значение цвета фона
     public static procedure SetRealBackColor(a: Color);
@@ -912,6 +917,8 @@ type
       
       Draws.RemoveAll(x -> (x = nil) or (x.Symbol = 'T'));
       Result.Draws := Draws.ToArray;
+      
+      b.Dispose;
     end;
     
     ///Преобразует файл-рисунок bmpname в файл .ktx
