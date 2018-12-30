@@ -10,7 +10,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 21);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 22);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -86,16 +86,19 @@ type
     private static _MinimalWidth: integer = 100;
     private static _MinimalHeight: integer = 30;
     
-    ///Минимально-допустимое значение ширины экрана
-    public static property MinimalWidth: integer read _MinimalWidth;
-    ///Минимально-допустимое значение высоты экрана
-    public static property MinimalHeight: integer read _MinimalHeight;
+    private static procedure SetMinimalWidth(a: integer) := _MinimalWidth := a;
+    private static procedure SetMinimalHeight(a: integer) := _MinimalHeight := a;
     
-    ///Задаёт минимально-допустимые значения ширины и высоты экрана
-    public static procedure SetMinimal(x, y: integer);
+    ///Возвращает или задаёт минимально допустимое значение ширины экрана
+    public static property MinimalWidth: integer read _MinimalWidth write SetMinimalWidth;
+    ///Возвращает или задаёт минимально допустимое значение высоты экрана
+    public static property MinimalHeight: integer read _MinimalHeight write SetMinimalHeight;
+    
+    ///Задаёт минимально допустимые значения ширины и высоты экрана
+    public static procedure SetMinimalSize(x, y: integer);
     begin
-      _MinimalWidth:=x;
-      _MinimalHeight:=y;
+      _MinimalWidth := x;
+      _MinimalHeight := y;
     end;
     
     private static _width: integer = 100;
@@ -126,49 +129,67 @@ type
     end;
     
     ///Задаёт действительное значение цвета фона
-    public static procedure SetRealBackColor(a: Color);
+    private static procedure SetRealBackColor(a: Color);
     begin
       System.Console.BackgroundColor := a;
     end;
     
     ///Задаёт действительное значение цвета текста
-    public static procedure SetRealForeColor(a: Color);
+    private static procedure SetRealForeColor(a: Color);
     begin
       System.Console.ForegroundColor := a;
     end;
     
-    ///Задаёт или возвращает действительное значение цвета фона консоли
+    ///Возвращает или задаёт действительное значение цвета фона консоли
     public static property RealBack: Color read System.Console.BackgroundColor write SetRealBackColor;
-    ///Задаёт или возвращает действительное значение цвета текста консоли
+    
+    ///Возвращает или задаёт действительное значение цвета текста консоли
     public static property RealFore: Color read System.Console.ForegroundColor write SetRealForeColor;
     
-    ///Стандартное значение цвета текста консоли
-    public static property ColorFore: Color read _cfore;
-    ///Стандартное значение цвета бэкграунда консоли
-    public static property ColorBack: Color read _cback;
-    ///Стандартное значение цвета недоступного текста консоли
-    public static property ColorDisable: Color read _cdisable;
-    ///Стандартное значение цвета текста ошибок консоли
-    public static property ColorError: Color read _cerr;
-    ///Стандартное значение цвета текста истинных значений консоли
-    public static property ColorTrue: Color read _ctrue;
-    ///Стандартное значение цвета текста ложных значений консоли
-    public static property ColorFalse: Color read _cfalse;
+    private static procedure SetColorFore(a: Color) := _cfore := a;
+    private static procedure SetColorBack(a: Color) := _cback := a;
+    private static procedure SetColorDisable(a: Color) := _cdisable := a;
+    private static procedure SetColorError(a: Color) := _cerr := a;
+    private static procedure SetColorTrue(a: Color) := _ctrue := a;
+    private static procedure SetColorFalse(a: Color) := _cfalse := a;
+    
+    ///Возвращает или задаёт стандартное значение цвета текста консоли
+    public static property ColorFore: Color read _cfore write SetColorFore;
+    
+    ///Возвращает или задаёт стандартное значение цвета бэкграунда консоли
+    public static property ColorBack: Color read _cback write SetColorBack;
+    
+    ///Возвращает или задаёт стандартное значение цвета недоступного текста консоли
+    public static property ColorDisable: Color read _cdisable write SetColorDisable;
+    
+    ///Возвращает или задаёт стандартное значение цвета текста ошибок консоли
+    public static property ColorError: Color read _cerr write SetColorError;
+    
+    ///Возвращает или задаёт стандартное значение цвета текста истинных значений консоли
+    public static property ColorTrue: Color read _ctrue write SetColorTrue;
+    
+    ///Возвращает или задаёт стандартное значение цвета текста ложных значений консоли
+    public static property ColorFalse: Color read _cfalse write SetColorFalse;
     
     ///Действительная высота окна консоли
     public static property RealHeight: integer read System.Console.WindowHeight;
+    
     ///Действительная ширина окна консоли
     public static property RealWidth: integer read System.Console.WindowWidth;
     
-    ///Высота окна консоли
-    public static property Height: integer read _height;
-    ///Ширина окна консоли
-    public static property Width: integer read _width;
+    private static procedure SetWindowWidth(a: integer) := _width := a;
+    private static procedure SetWindowHeight(a: integer) := _height := a;
     
-    ///Максимально-возможная высота окна консоли
+    ///Возвращает или задаёт высоту окна консоли
+    public static property Height: integer read _height write SetWindowHeight;
+    
+    ///Возвращает или задаёт ширину окна консоли
+    public static property Width: integer read _width write SetWindowWidth;
+    
+    ///Возвращает максимальную высоту окна консоли
     public static property MaxHeight: integer read System.Console.LargestWindowHeight;
     
-    ///Максимально-возможная ширина окна консоли
+    ///Возвращает максимальную ширину окна консоли
     public static property MaxWidth: integer read System.Console.LargestWindowWidth;
     
     ///Устанавливает положение курсора
@@ -177,7 +198,7 @@ type
     ///Устанавливает положение курсора
     public static procedure SetPos(x, y: integer) := System.Console.SetCursorPosition(x, y);
     
-    ///Очищает окно консоли, заливая его текущем цветом бэкграунда
+    ///Очищает окно консоли, заливая его текущем цветом RealBack
     public static procedure Clear() := System.Console.Clear();
     
     ///Задаёт размеры окна консоли текущими значениями ширины и высоты окна
@@ -197,36 +218,8 @@ type
     ///Задаёт размер буфера консоли
     public static procedure SetBufferSize(y: integer) := System.Console.SetBufferSize(_width,y);
     
-    ///Изменяет цвет текста на цвет текста ошибок
-    public static procedure SetFontError();
-    begin
-      System.Console.ForegroundColor:=_cerr;
-    end;
-    ///Изменяет цвет текста на цвет недоступного текста
-    public static procedure SetFontOff();
-    begin
-      System.Console.ForegroundColor:=_cdisable;
-    end;
-    ///Изменяет цвет текста на стандартный
-    public static procedure SetFontStandard();
-    begin
-      System.Console.ForegroundColor:=_cfore;
-    end;
-    ///Изменяет цвет текста на цвет ложного текста
-    public static procedure SetFontFalse();
-    begin
-      System.Console.ForegroundColor:=_cfalse;
-    end;
-    ///Изменяет цвет текста на цвет истинного текста
-    public static procedure SetFontTrue();
-    begin
-      System.Console.ForegroundColor:=_ctrue;
-    end;
     ///Изменяет цвет текста на цвет текста по a
-    public static procedure SetFontBool(a: boolean);
-    begin
-      if a then SetFontTrue() else SetFontFalse();
-    end;
+    public static function BooleanColor(a: boolean): Color := a ? Console._ctrue : Console._cfalse;
     
     ///Обновляет размеры консоли
     ///Рекомендуется использовать на каждой итерации цикла
@@ -235,10 +228,10 @@ type
       while (Console.MaxWidth<Console.MinimalWidth) or (Console.MaxHeight<Console.MinimalHeight) do
       begin
         Clear();
-        SetFontError();
+        Console.RealFore := Console._cerr;
         write(Err1);
         sleep(100);
-        SetFontStandard();
+        Console.RealFore := Console._cfore
       end;
       
       if not ((Console.Width<=Console.MaxWidth) and (Console.Height<=Console.MaxHeight)) then
@@ -306,6 +299,11 @@ type
     begin
       Console.SetCursorPosition(x,y);
       DrawLn(o);
+    end;
+    
+    public static constructor;
+    begin
+      Init();
     end;
   end;
   
@@ -407,7 +405,7 @@ type
     ///-
     private _stage: array of integer;
     ///-
-    private _output: System.ConsoleKeyInfo;
+    private _input: System.ConsoleKeyInfo;
     
     ///Состояние блока
     public property Status: boolean read _status;
@@ -416,12 +414,15 @@ type
     public property Stage: array of integer read _stage;
     
     ///Возвращает информацию о введённой клавише
-    public property Input: System.ConsoleKeyInfo read _output;
+    public property Input: System.ConsoleKeyInfo read _input;
+    
+    ///Возвращает нажатую клавишу
+    public function GetInputKey := _input.Key;
     
     ///Чтение клавиши
     public procedure Read;
     begin
-      _output := System.Console.ReadKey(true);
+      _input := System.Console.ReadKey(true);
     end;
     
     ///Обновляет консоль
