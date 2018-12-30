@@ -10,7 +10,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 19);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 20);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -809,7 +809,9 @@ type
   
   ///Представляет типы рисования
   DrawingType = (
+    ///Рисование всех строк
     Aline,
+    ///Рисования всего по цвету
     Hex
   );
   
@@ -825,16 +827,16 @@ type
     private static procedure SetDefaultIsOverlay(a: boolean) := _DefaultIsOverlay := a;
     private static procedure SetDefaultDrawingType(a: DrawingType) := _DefaultDrawingType := a;
     
-    ///Стандартная конвертация цвета
+    ///Возвращает или задаёт стандартную конвертацию цвета
     public static property RGBConvertingType: RGBToColorConvertType read _RGBConvertingType write SetRGBConveringType;
     
-    ///Стандартная отцентровка рисунка
+    ///Возвращает или задаёт стандартную отцентровку рисунка
     public static property DefaultAlignmentType: DrawingAlignmentType read _DefaultAlignmentType write SetDefaultAlignmentType;
     
-    ///Стандартный параметр наложения
+    ///Возвращает или задаёт стандартный параметр наложения
     public static property DefaultIsOverlay: boolean read _DefaultIsOverlay write SetDefaultIsOverlay;
     
-    ///Стандартный тип рисования
+    ///Возвращает или задаёт стандартный тип рисования
     public static property DefaultDrawingType: DrawingType read _DefaultDrawingType write SetDefaultDrawingType;
     
     ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
@@ -939,6 +941,7 @@ type
     ///Возвращает позицию в консоли левого верхнего угла картинки с учётом стандартного центрирования
     public static function GetStartPos(a: DrawBoxBlock) := GetStartPos(a, _DefaultAlignmentType);
     
+    ///Построчное рисование a от позиции (x, y) и параметром наложения isoverlay
     public static procedure AlineDraw(a: DrawBoxBlock; x, y: integer; isoverlay: boolean);
     begin
       System.Console.BackgroundColor:=a.Background;
@@ -952,20 +955,28 @@ type
       end;
     end;
     
+    ///Построчное рисование a от позиции x и параметром наложения isoverlay
     public static procedure AlineDraw(a: DrawBoxBlock; x: (integer, integer); isoverlay: boolean) := AlineDraw(a, x.Item1, x.Item2, isoverlay);
     
+    ///Построчное рисование a от позиции x и стандартным параметром наложения
     public static procedure AlineDraw(a: DrawBoxBlock; x: (integer, integer)) := AlineDraw(a, x, _DefaultIsOverlay);
     
+    ///Построчное рисование a от позиции (x, y) и стандартным параметром наложения
     public static procedure AlineDraw(a: DrawBoxBlock; x, y: integer) := AlineDraw(a, x, y, _DefaultIsOverlay);
     
+    ///Построчное рисование a с отцентровкой At и параметром наложения isoverlay
     public static procedure AlineDraw(a: DrawBoxBlock; At: DrawingAlignmentType; isoverlay: boolean) := AlineDraw(a, GetStartPos(a,At),isoverlay);
     
+    ///Построчное рисование a с отцентровкой At и стандартным параметром наложения
     public static procedure AlineDraw(a: DrawBoxBlock; At: DrawingAlignmentType) := AlineDraw(a, GetStartPos(a,At), _DefaultIsOverlay);
     
+    ///Построчное рисование a с стандартной отцентровкой и параметром наложения isoverlay
     public static procedure AlineDraw(a: DrawBoxBlock; isoverlay: boolean) := AlineDraw(a, _DefaultAlignmentType, isoverlay);
     
+    ///Построчное рисование a с стандартной отцентровкой и стандартным параметром наложения
     public static procedure AlineDraw(a: DrawBoxBlock) := AlineDraw(a, _DefaultIsOverlay);
     
+    ///Поцветовое рисование a от позиции (x, y) и параметром наложения isoverlay
     public static procedure HexDraw(a: DrawBoxBlock; x, y: integer; isoverlay: boolean);
     begin
       System.Console.BackgroundColor:=a.Background;
@@ -990,20 +1001,28 @@ type
       end;
     end;
     
+    ///Поцветовое рисование a от позиции x и параметром наложения isoverlay
     public static procedure HexDraw(a: DrawBoxBlock; x: (integer, integer); isoverlay: boolean) := HexDraw(a, x.Item1, x.Item2, isoverlay);
     
+    ///Поцветовое рисование a от позиции x и стандартным параметром наложения
     public static procedure HexDraw(a: DrawBoxBlock; x: (integer, integer)) := HexDraw(a, x, _DefaultIsOverlay);
     
+    ///Поцветовое рисование a от позиции (x, y) и стандартным параметром наложения
     public static procedure HexDraw(a: DrawBoxBlock; x, y: integer) := HexDraw(a, x, y, _DefaultIsOverlay);
     
+    ///Поцветовое рисование a с отцентровкой At и параметром наложения isoverlay
     public static procedure HexDraw(a: DrawBoxBlock; At: DrawingAlignmentType; isoverlay: boolean) := HexDraw(a, GetStartPos(a,At),isoverlay);
     
+    ///Поцветовое рисование a с отцентровкой At и стандартным параметром наложения
     public static procedure HexDraw(a: DrawBoxBlock; At: DrawingAlignmentType) := HexDraw(a, GetStartPos(a,At), _DefaultIsOverlay);
     
+    ///Поцветовое рисование a с стандартной отцентровкой и параметром наложения isoverlay
     public static procedure HexDraw(a: DrawBoxBlock; isoverlay: boolean) := HexDraw(a, _DefaultAlignmentType, isoverlay);
     
+    ///Поцветовое рисование a с стандартной отцентровкой и стандартным параметром наложения
     public static procedure HexDraw(a: DrawBoxBlock) := HexDraw(a, _DefaultIsOverlay);
     
+    ///Dt-рисование a от позиции (x, y) и параметром наложения isoverlay
     public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; x, y: integer; isoverlay: boolean);
     begin
       case Dt of
@@ -1012,35 +1031,53 @@ type
       end;
     end;
     
+    ///Dt-рисование a от позиции x и параметром наложения isoverlay
     public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; x: (integer, integer); isoverlay: boolean) := Draw(a, Dt, x.Item1, x.Item2, isoverlay);
     
+    ///Dt-рисование a от позиции x и стандартным параметром наложения
     public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; x: (integer, integer)) := Draw(a, Dt, x, _DefaultIsOverlay);
     
+    ///Dt-рисование a от позиции (x, y) и стандартным параметром наложения
     public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; x, y: integer) := Draw(a, Dt, x, y, _DefaultIsOverlay);
     
-    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean) := Draw(a, Dt, GetStartPos(a,At),isoverlay);
+    ///Dt-рисование a с отцентровкой At и параметром наложения isoverlay
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean) := Draw(a, Dt, GetStartPos(a,At), isoverlay);
     
+    ///Dt-рисование a с отцентровкой At и стандартным параметром наложения
     public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType) := Draw(a, Dt, GetStartPos(a,At), _DefaultIsOverlay);
     
+    ///Dt-рисование a с стандартной отцентровкой и параметром наложения isoverlay
     public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; isoverlay: boolean) := Draw(a, Dt, _DefaultAlignmentType, isoverlay);
     
+    ///Dt-рисование a с стандартной отцентровкой и стандартным параметром наложения
     public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType) := Draw(a, Dt, _DefaultIsOverlay);
     
+    ///Стандартное рисование a от позиции (x, y) и параметром наложения isoverlay
+    public static procedure Draw(a: DrawBoxBlock; x, y: integer; isoverlay: boolean) := Draw(a, Drawing._DefaultDrawingType, x, y, isoverlay);
+    
+    ///Стандартное рисование a от позиции x и параметром наложения isoverlay
     public static procedure Draw(a: DrawBoxBlock; x: (integer, integer); isoverlay: boolean) := Draw(a, _DefaultDrawingType, x.Item1, x.Item2, isoverlay);
     
+    ///Стандартное рисование a от позиции x и стандартным параметром наложения
     public static procedure Draw(a: DrawBoxBlock; x: (integer, integer)) := Draw(a, _DefaultDrawingType, x, _DefaultIsOverlay);
     
+    ///Стандартное рисование a от позиции (x, y) и стандартным параметром наложения
     public static procedure Draw(a: DrawBoxBlock; x, y: integer) := Draw(a, _DefaultDrawingType, x, y, _DefaultIsOverlay);
     
+    ///Стандартное рисование a с отцентровкой At и параметром наложения isoverlay
     public static procedure Draw(a: DrawBoxBlock; At: DrawingAlignmentType; isoverlay: boolean) := Draw(a, _DefaultDrawingType, GetStartPos(a,At),isoverlay);
     
+    ///Стандартное рисование a с отцентровкой At и стандартным параметром наложения
     public static procedure Draw(a: DrawBoxBlock; At: DrawingAlignmentType) := Draw(a, _DefaultDrawingType, GetStartPos(a,At), _DefaultIsOverlay);
     
+    ///Стандартное рисование a с стандартной отцентровкой и параметром наложения isoverlay
     public static procedure Draw(a: DrawBoxBlock; isoverlay: boolean) := Draw(a, _DefaultDrawingType, _DefaultAlignmentType, isoverlay);
     
+    ///Стандартное рисование a с стандартной отцентровкой и стандартным параметром наложения
     public static procedure Draw(a: DrawBoxBlock) := Draw(a, _DefaultDrawingType, _DefaultIsOverlay);
   end;
 
+///Изменяет размер консоли на размер переданного рисунка и возвращает этот же рисунок
 function SetSize(self: DrawBoxBlock): DrawBoxBlock; extensionmethod;
 begin
   Result := self;
@@ -1048,32 +1085,52 @@ begin
   Console.SetBufferSize(self.SizeX,self.SizeY);
 end;
 
+///Рисует текущий объект в консоли типом рисования Dt с позиции (x, y) и параметром наложения isoverlay
+procedure Draw(self: DrawBoxBlock; Dt: DrawingType; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Dt, x, y, isoverlay);
+
+///Рисует текущий объект в консоли типом рисования Dt с позиции x и параметром наложения isoverlay
 procedure Draw(self: DrawBoxBlock; Dt: DrawingType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Self, Dt, x.Item1, x.Item2, isoverlay);
 
+///Рисует текущий объект в консоли типом рисования Dt с позиции x и стандартным параметром наложения
 procedure Draw(self: DrawBoxBlock; Dt: DrawingType; x: (integer, integer)); extensionmethod := Drawing.Draw(self, Dt, x, Drawing._DefaultIsOverlay);
 
+///Рисует текущий объект в консоли типом рисования Dt с позиции (x, y) и стандартным параметром наложения
 procedure Draw(self: DrawBoxBlock; Dt: DrawingType; x, y: integer); extensionmethod := Drawing.Draw(self, Dt, x, y, Drawing._DefaultIsOverlay);
 
+///Рисует текущий объект в консоли типом рисования Dt с отцентровкой At и параметром наложения isoverlay
 procedure Draw(self: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Dt, Drawing.GetStartPos(self,At),isoverlay);
 
+///Рисует текущий объект в консоли типом рисования Dt с отцентровкой At и стандартным параметром наложения
 procedure Draw(self: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType); extensionmethod := Drawing.Draw(self, Dt, Drawing.GetStartPos(self, At), Drawing._DefaultIsOverlay);
 
+///Рисует текущий объект в консоли типом рисования Dt с стандартной отцентровкой и параметром наложения isoverlay
 procedure Draw(self: DrawBoxBlock; Dt: DrawingType; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Dt, Drawing._DefaultAlignmentType, isoverlay);
 
+///Рисует текущий объект в консоли типом рисования Dt с стандартной отцентровкой и стандартным параметром наложения
 procedure Draw(self: DrawBoxBlock; Dt: DrawingType); extensionmethod := Drawing.Draw(self, Dt, Drawing._DefaultIsOverlay);
 
+///Рисует текущий объект в консоли стандартным типом рисования с позиции (x, y) и параметром наложения isoverlay
+procedure Draw(self: DrawBoxBlock; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, x, y, isoverlay);
+
+///Рисует текущий объект в консоли стандартным типом рисования с позиции x и параметром наложения isoverlay
 procedure Draw(self: DrawBoxBlock; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, x.Item1, x.Item2, isoverlay);
 
+///Рисует текущий объект в консоли стандартным типом рисования с позиции x и стандартным параметром наложения
 procedure Draw(self: DrawBoxBlock; x: (integer, integer)); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, x, Drawing._DefaultIsOverlay);
 
+///Рисует текущий объект в консоли стандартным типом рисования с позиции (x, y) и стандартным параметром наложения
 procedure Draw(self: DrawBoxBlock; x, y: integer); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, x, y, Drawing._DefaultIsOverlay);
 
+///Рисует текущий объект в консоли стандартным типом рисования с отцентровкой At и параметром наложения isoverlay
 procedure Draw(self: DrawBoxBlock; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing.GetStartPos(self,At),isoverlay);
 
+///Рисует текущий объект в консоли стандартным типом рисования с отцентровкой At и стандартным параметром наложения
 procedure Draw(self: DrawBoxBlock; At: DrawingAlignmentType); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing.GetStartPos(self,At), Drawing._DefaultIsOverlay);
 
+///Рисует текущий объект в консоли стандартным типом рисования с стандартной отцентровкой и параметром наложения isoverlay
 procedure Draw(self: DrawBoxBlock; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing._DefaultAlignmentType, isoverlay);
 
+///Рисует текущий объект в консоли со всеми стандартными значениями
 procedure Draw(self: DrawBoxBlock); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
 
 begin
