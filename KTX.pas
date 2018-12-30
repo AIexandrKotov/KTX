@@ -10,7 +10,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 0; Build: 18);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 19);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -397,8 +397,11 @@ type
   
   ///Представляет класс псевдоокна, который управляется клавишами
   KeyBlock = class
+    ///-
     private _status: boolean;
+    ///-
     private _stage: array of integer;
+    ///-
     private _output: System.ConsoleKeyInfo;
     
     ///Состояние блока
@@ -443,6 +446,7 @@ type
     ///Создаёт новый экземпляр класс KeyBlock
     public constructor;
     begin
+      Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
       _stage := new integer[1];
@@ -452,6 +456,7 @@ type
     ///Создаёт новый экземпляр с указанным числом параметров
     public constructor(a: integer);
     begin
+      Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
       _stage := new integer[a];
@@ -498,7 +503,13 @@ type
   end;
   
   ///Тип конвертации RGB в ConsoleColor
-  RGBToColorConvertType = (old, &new);
+  RGBToColorConvertType = (
+    ///Тип конвертации версии 2.0.2
+    ///Больше подходит для чёрно-белых фотографий
+    old,
+    ///Новый тип конвертации
+    &new
+  );
   
   ///Класс, содержащий значения цветов консоли в виде RGB
   RGBConsole = static class
@@ -774,9 +785,57 @@ type
     end;
   end;
   
+  ///Представляет типы центровки
+  DrawingAlignmentType = (
+    ///Отцентровка относительно левого верхнего угла
+    LeftUp,
+    ///Отцентровка относительно верхней стороны
+    Up,
+    ///Отцентровка относитльно правого верхнего угла
+    RightUp,
+    ///Отцентровка относительно левой стороны
+    Left,
+    ///Отцентровка по центру
+    Center,
+    ///Отцентровка относительно правой стороны
+    Right,
+    ///Отцентровка относительно левого нижнего угла
+    LeftDown,
+    ///Отцентровка относительно нижней стороны
+    Down,
+    ///Отцентровка относительно правого нижнего угла
+    RightDown
+  );
+  
+  ///Представляет типы рисования
+  DrawingType = (
+    Aline,
+    Hex
+  );
+  
   ///Содержит методы для рисования
   Drawing = static class
-    public static RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.new;
+    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.new;
+    private static _DefaultAlignmentType: DrawingAlignmentType := DrawingAlignmentType.Center;
+    private static _DefaultIsOverlay := false;
+    private static _DefaultDrawingType: DrawingType := DrawingType.Aline;
+    
+    private static procedure SetRGBConveringType(a: RGBToColorConvertType) := _RGBConvertingType := a;
+    private static procedure SetDefaultAlignmentType(a: DrawingAlignmentType) := _DefaultAlignmentType := a;
+    private static procedure SetDefaultIsOverlay(a: boolean) := _DefaultIsOverlay := a;
+    private static procedure SetDefaultDrawingType(a: DrawingType) := _DefaultDrawingType := a;
+    
+    ///Стандартная конвертация цвета
+    public static property RGBConvertingType: RGBToColorConvertType read _RGBConvertingType write SetRGBConveringType;
+    
+    ///Стандартная отцентровка рисунка
+    public static property DefaultAlignmentType: DrawingAlignmentType read _DefaultAlignmentType write SetDefaultAlignmentType;
+    
+    ///Стандартный параметр наложения
+    public static property DefaultIsOverlay: boolean read _DefaultIsOverlay write SetDefaultIsOverlay;
+    
+    ///Стандартный тип рисования
+    public static property DefaultDrawingType: DrawingType read _DefaultDrawingType write SetDefaultDrawingType;
     
     ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
     public static function ARGBPixelToDrawBox(x, y: integer; bg: Color; a, r, g, b: byte): DrawBox;
@@ -789,13 +848,13 @@ type
       Result.PosX := x;
       Result.PosY := y;
       Result.Symbol:=' ';
-      Result.Back:=RGBConsole.RGBToColor(RGBConvertingType,r,g,b);
+      Result.Back:=RGBConsole.RGBToColor(_RGBConvertingType,r,g,b);
       
       var RR := (r mod 16) + 1;
       var GG := (g mod 16) + 1;
       var BB := (b mod 16) + 1;
       Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
-      Result.Fore := RGBConsole.RGBToColor(RGBConvertingType,RR*16,GG*16,BB*16);
+      Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType,RR*16,GG*16,BB*16);
       
       case bg of
         Color.Black: if (r = RGBConsole.Black.R) and (g = RGBConsole.Black.G) and (b = RGBConsole.Black.B) then Result.Symbol := 'T';
@@ -837,7 +896,7 @@ type
       end;
       
       var bgrnd0 := System.Drawing.Color.FromArgb(Colors.GroupBy(x -> x.ToArgb).MaxBy(x -> x.Count).Key);
-      var bgrnd := RGBConsole.RGBToColor(RGBConvertingType, bgrnd0.A, bgrnd0.G, bgrnd0.B);
+      var bgrnd := RGBConsole.RGBToColor(_RGBConvertingType, bgrnd0.A, bgrnd0.G, bgrnd0.B);
       Result.Background := bgrnd;
       
       for var i:=0 to (b.Width)*(b.Height) - 2 do
@@ -859,21 +918,31 @@ type
       BitMapToDrawBoxBlock(bmpname).WriteKTXFile(ktxname);
     end;
     
-    ///Возвращает левый верхний угол окна рисования
-    public static function GetStartPos(a: DrawBoxBlock): (integer, integer);
+    ///Возвращает позицию в консоли левого верхнего угла картинки с учётом заданного центрирования
+    public static function GetStartPos(a: DrawBoxBlock; AlignementType: DrawingAlignmentType): (integer, integer);
     begin
-      var x:=abs(a.SizeX-Console.Width) div 2;
-      var y:=abs(a.SizeY-Console.Height) div 2;
-      Result:=(x,y);
+      case AlignementType of
+        LeftUp: Result := (0,0);
+        Up: Result := ((Console.Width - a.SizeX) div 2, 0);
+        RightUp: Result := ((Console.Width - a.SizeX), 0);
+        
+        Left: Result := (0, (Console.Height - a.SizeY) div 2);
+        Center: Result := ((Console.Width - a.SizeX) div 2,(Console.Height -  a.SizeY) div 2);
+        Right: Result := ((Console.Width - a.SizeX), (Console.Height - a.SizeY) div 2);
+        
+        LeftDown: Result := (0, (Console.Height - a.SizeY));
+        Down: Result := ((Console.Width - a.SizeX) div 2, (Console.Height - a.SizeY));
+        RightDown: Result := ((Console.Width - a.SizeX), (Console.Height - a.SizeY));
+      end;
     end;
     
-    ///Полный вывод всей картинки
-    public static procedure DrawAll(a: DrawBoxBlock);
+    ///Возвращает позицию в консоли левого верхнего угла картинки с учётом стандартного центрирования
+    public static function GetStartPos(a: DrawBoxBlock) := GetStartPos(a, _DefaultAlignmentType);
+    
+    public static procedure AlineDraw(a: DrawBoxBlock; x, y: integer; isoverlay: boolean);
     begin
-      var t:=GetStartPos(a);
-      var (x, y):=t;
       System.Console.BackgroundColor:=a.Background;
-      Console.Clear;
+      if not isoverlay then Console.Clear;
       for var i:=0 to a.Draws.Length-1 do
       begin
         Console.SetCursorPosition(a.Draws[i].PosX+x,a.Draws[i].PosY+y);
@@ -883,13 +952,24 @@ type
       end;
     end;
     
-    ///Быстрый вывод по цветам заднего фона консоли
-    public static procedure HexDraw(a: DrawBoxBlock);
+    public static procedure AlineDraw(a: DrawBoxBlock; x: (integer, integer); isoverlay: boolean) := AlineDraw(a, x.Item1, x.Item2, isoverlay);
+    
+    public static procedure AlineDraw(a: DrawBoxBlock; x: (integer, integer)) := AlineDraw(a, x, _DefaultIsOverlay);
+    
+    public static procedure AlineDraw(a: DrawBoxBlock; x, y: integer) := AlineDraw(a, x, y, _DefaultIsOverlay);
+    
+    public static procedure AlineDraw(a: DrawBoxBlock; At: DrawingAlignmentType; isoverlay: boolean) := AlineDraw(a, GetStartPos(a,At),isoverlay);
+    
+    public static procedure AlineDraw(a: DrawBoxBlock; At: DrawingAlignmentType) := AlineDraw(a, GetStartPos(a,At), _DefaultIsOverlay);
+    
+    public static procedure AlineDraw(a: DrawBoxBlock; isoverlay: boolean) := AlineDraw(a, _DefaultAlignmentType, isoverlay);
+    
+    public static procedure AlineDraw(a: DrawBoxBlock) := AlineDraw(a, _DefaultIsOverlay);
+    
+    public static procedure HexDraw(a: DrawBoxBlock; x, y: integer; isoverlay: boolean);
     begin
-      var t:=GetStartPos(a);
-      var (x, y):=t;
       System.Console.BackgroundColor:=a.Background;
-      Console.Clear;
+      if not isoverlay then Console.Clear;
       var aa: array[1..16] of array of DrawBox;
       for var i:=1 to 16 do
       begin
@@ -910,34 +990,91 @@ type
       end;
     end;
     
-    ///Быстрый вывод по цветам заднего фона консоли
-    ///Медленнее обычного HexDraw, но окажется гораздо быстрее, если в DrawBox'ах используется один и тот же цвет текста
-    public static procedure HexDrawWithSearch(a: DrawBoxBlock);
+    public static procedure HexDraw(a: DrawBoxBlock; x: (integer, integer); isoverlay: boolean) := HexDraw(a, x.Item1, x.Item2, isoverlay);
+    
+    public static procedure HexDraw(a: DrawBoxBlock; x: (integer, integer)) := HexDraw(a, x, _DefaultIsOverlay);
+    
+    public static procedure HexDraw(a: DrawBoxBlock; x, y: integer) := HexDraw(a, x, y, _DefaultIsOverlay);
+    
+    public static procedure HexDraw(a: DrawBoxBlock; At: DrawingAlignmentType; isoverlay: boolean) := HexDraw(a, GetStartPos(a,At),isoverlay);
+    
+    public static procedure HexDraw(a: DrawBoxBlock; At: DrawingAlignmentType) := HexDraw(a, GetStartPos(a,At), _DefaultIsOverlay);
+    
+    public static procedure HexDraw(a: DrawBoxBlock; isoverlay: boolean) := HexDraw(a, _DefaultAlignmentType, isoverlay);
+    
+    public static procedure HexDraw(a: DrawBoxBlock) := HexDraw(a, _DefaultIsOverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; x, y: integer; isoverlay: boolean);
     begin
-      var t:=GetStartPos(a);
-      var (x, y):=t;
-      System.Console.BackgroundColor:=a.Background;
-      Console.Clear;
-      var aa: array[1..16] of array of DrawBox;
-      for var i:=1 to 16 do
-      begin
-        aa[i]:=a.Draws.Where(x -> ConvertColor.ColorToInt(x.Back)=i-1).ToArray;
-      end;
-      for var i:=1 to 16 do
-      begin
-        System.Console.BackgroundColor:=ConvertColor.IntToColor(i-1);
-        if aa[i]<>nil then
-        begin
-          for var j:=0 to aa[i].Length-1 do
-          begin
-            Console.SetCursorPosition(aa[i][j].PosX+x,aa[i][j].PosY+y);
-            if Console.RealFore<>aa[i][j].Fore then System.Console.ForegroundColor:=aa[i][j].Fore;
-            write(aa[i][j].Symbol);
-          end;
-        end;
+      case Dt of
+        DrawingType.Aline: AlineDraw(a, x, y, isoverlay);
+        DrawingType.Hex: HexDraw(a, x, y, isoverlay);
       end;
     end;
+    
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; x: (integer, integer); isoverlay: boolean) := Draw(a, Dt, x.Item1, x.Item2, isoverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; x: (integer, integer)) := Draw(a, Dt, x, _DefaultIsOverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; x, y: integer) := Draw(a, Dt, x, y, _DefaultIsOverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean) := Draw(a, Dt, GetStartPos(a,At),isoverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType) := Draw(a, Dt, GetStartPos(a,At), _DefaultIsOverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType; isoverlay: boolean) := Draw(a, Dt, _DefaultAlignmentType, isoverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; Dt: DrawingType) := Draw(a, Dt, _DefaultIsOverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; x: (integer, integer); isoverlay: boolean) := Draw(a, _DefaultDrawingType, x.Item1, x.Item2, isoverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; x: (integer, integer)) := Draw(a, _DefaultDrawingType, x, _DefaultIsOverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; x, y: integer) := Draw(a, _DefaultDrawingType, x, y, _DefaultIsOverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; At: DrawingAlignmentType; isoverlay: boolean) := Draw(a, _DefaultDrawingType, GetStartPos(a,At),isoverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; At: DrawingAlignmentType) := Draw(a, _DefaultDrawingType, GetStartPos(a,At), _DefaultIsOverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock; isoverlay: boolean) := Draw(a, _DefaultDrawingType, _DefaultAlignmentType, isoverlay);
+    
+    public static procedure Draw(a: DrawBoxBlock) := Draw(a, _DefaultDrawingType, _DefaultIsOverlay);
   end;
+
+function SetSize(self: DrawBoxBlock): DrawBoxBlock; extensionmethod;
+begin
+  Result := self;
+  Console.SetWindowSize(self.SizeX,self.SizeY);
+  Console.SetBufferSize(self.SizeX,self.SizeY);
+end;
+
+procedure Draw(self: DrawBoxBlock; Dt: DrawingType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Self, Dt, x.Item1, x.Item2, isoverlay);
+
+procedure Draw(self: DrawBoxBlock; Dt: DrawingType; x: (integer, integer)); extensionmethod := Drawing.Draw(self, Dt, x, Drawing._DefaultIsOverlay);
+
+procedure Draw(self: DrawBoxBlock; Dt: DrawingType; x, y: integer); extensionmethod := Drawing.Draw(self, Dt, x, y, Drawing._DefaultIsOverlay);
+
+procedure Draw(self: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Dt, Drawing.GetStartPos(self,At),isoverlay);
+
+procedure Draw(self: DrawBoxBlock; Dt: DrawingType; At: DrawingAlignmentType); extensionmethod := Drawing.Draw(self, Dt, Drawing.GetStartPos(self, At), Drawing._DefaultIsOverlay);
+
+procedure Draw(self: DrawBoxBlock; Dt: DrawingType; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Dt, Drawing._DefaultAlignmentType, isoverlay);
+
+procedure Draw(self: DrawBoxBlock; Dt: DrawingType); extensionmethod := Drawing.Draw(self, Dt, Drawing._DefaultIsOverlay);
+
+procedure Draw(self: DrawBoxBlock; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, x.Item1, x.Item2, isoverlay);
+
+procedure Draw(self: DrawBoxBlock; x: (integer, integer)); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, x, Drawing._DefaultIsOverlay);
+
+procedure Draw(self: DrawBoxBlock; x, y: integer); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, x, y, Drawing._DefaultIsOverlay);
+
+procedure Draw(self: DrawBoxBlock; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing.GetStartPos(self,At),isoverlay);
+
+procedure Draw(self: DrawBoxBlock; At: DrawingAlignmentType); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing.GetStartPos(self,At), Drawing._DefaultIsOverlay);
+
+procedure Draw(self: DrawBoxBlock; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing._DefaultAlignmentType, isoverlay);
+
+procedure Draw(self: DrawBoxBlock); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
 
 begin
   
