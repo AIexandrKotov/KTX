@@ -10,7 +10,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 22);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 23);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -619,22 +619,22 @@ type
       or ((R.InRange(160,255)) and (G.InRange(0,63)) and (B.InRange(64,127))) then Result := _red.ConsoleColor;
       
       //Зелёный цвет
-      if ((R.InRange(0,95)) and (G.InRange(192,255)) and (B.InRange(0,127))) then Result := _darkgreen.ConsoleColor;
+      if ((R.InRange(0,95)) and (G.InRange(192,255)) and (B.InRange(0,127))) then Result := _green.ConsoleColor;
       
       //Синий цвет
-      if ((R.InRange(0,95)) and (G.InRange(0,127)) and (B.InRange(160,225))) then Result := _darkblue.ConsoleColor;
+      if ((R.InRange(0,95)) and (G.InRange(0,127)) and (B.InRange(160,225))) then Result := _blue.ConsoleColor;
       
       //Пурпурный цвет
       if ((R.InRange(160,255)) and (G.InRange(0,63)) and (B.InRange(128,255)))
-      or ((R.InRange(160,255)) and (G.InRange(64,127)) and (B.InRange(192,255))) then Result := _darkmagenta.ConsoleColor;
+      or ((R.InRange(160,255)) and (G.InRange(64,127)) and (B.InRange(192,255))) then Result := _magenta.ConsoleColor;
       
       //Жёлтый цвет
       if ((R.InRange(160,255)) and (G.InRange(127,255)) and (B.InRange(0,63)))
-      or ((R.InRange(160,255)) and (G.InRange(192,255)) and (B.InRange(0,127))) then Result := _darkyellow.ConsoleColor;
+      or ((R.InRange(160,255)) and (G.InRange(192,255)) and (B.InRange(0,127))) then Result := _yellow.ConsoleColor;
       
-      //Тёмно-голубой цвет
+      //Голубой цвет
       if ((R.InRange(0,95)) and (G.InRange(128,255)) and (B.InRange(160,255)))
-      or ((R.InRange(0,95)) and (G.InRange(160,255)) and (B.InRange(128,255))) then Result := _darkcyan.ConsoleColor;
+      or ((R.InRange(0,95)) and (G.InRange(160,255)) and (B.InRange(128,255))) then Result := _cyan.ConsoleColor;
     end;
     
     ///Преобразование версии 2.0.2
@@ -668,6 +668,130 @@ type
       case a of
         old: Result := OldRGBToColor(r, g, b);
         &new: Result := FromRGB(r, g, b);
+      end;
+    end;
+    
+    ///Пожилое преобразование RGB в набор RGB меньше 16 (для цвета текста)
+    public static function OldRGBToSubColor(a: KTX.Color; r, g, b: byte): (integer, integer, integer);
+    begin
+      case a of
+        Color.Black, Color.DarkBlue, Color.DarkGreen, Color.DarkCyan, Color.DarkMagenta, Color.DarkYellow, Color.DarkRed:
+          Result := ((r mod 64) div 4 + 1, (g mod 64) div 4 + 1, (b mod 64) div 4 + 1);
+        Color.Blue, Color.Green, Color.Cyan, Color.Magenta, Color.Yellow, Color.Red:
+          Result := (
+            r < 128 ? (r mod 64) div 4 + 1 : 16 - (r mod 64) div 4,
+            g < 128 ? (g mod 64) div 4 + 1 : 16 - (g mod 64) div 4,
+            b < 128 ? (b mod 64) div 4 + 1 : 16 - (b mod 64) div 4
+          );
+        Color.DarkGray: Result := (((r - 64) mod 96) div 6 + 1, ((g - 64) mod 96) div 6 + 1, ((b - 64) mod 96) div 6 + 1);
+        Color.Gray: Result := (16 - ((r - 160) mod 96) div 6, 16 - ((g - 160) mod 96) div 6, 16 - ((b - 160) mod 96) div 6);
+        Color.White: Result := (16 - ((r - 224) mod 32) div 2, 16 - ((g - 224) mod 32) div 2, 16 - ((b - 224) mod 32) div 2);
+      end;
+    end;
+    
+    public static function NewRGBToSubColor(a: KTX.Color; r, g, b: byte): (integer, integer, integer);
+    begin
+      case a of      
+        Color.Black:
+          Result := ((r mod 64) div 4 + 1, (g mod 64) div 4 + 1, (b mod 64) div 4 + 1);
+        Color.DarkGray:
+          Result := (
+            r < 128 ? (r mod 32) div 2 + 1 : 16 - (r mod 128) div 8,
+            g < 128 ? (g mod 32) div 2 + 1 : 16 - (g mod 128) div 8,
+            b < 128 ? (b mod 32) div 2 + 1 : 16 - (b mod 128) div 8
+          );
+        Color.Gray:
+          Result := (
+            16 - (r mod 96) div 6,
+            g < 128 ? (g mod 32) div 2 + 1 : 16 - (g mod 128) div 8,
+            b < 128 ? (b mod 32) div 2 + 1 : 16 - (b mod 128) div 8
+          );
+        Color.White:
+          Result := (
+            16 - (r mod 96) div 6,
+            g < 128 ? (g mod 32) div 2 + 1 : 16 - (g mod 128) div 8,
+            b < 128 ? (b mod 32) div 2 + 1 : 16 - (b mod 128) div 8
+          );
+        Color.DarkRed:
+          Result := (
+            r < 128 ? (r mod 32) div 2 + 1 : 16 - (r mod 32) div 2,
+            (g mod 128) div 8 + 1,
+            (b mod 128) div 8 + 1 
+          );
+        Color.DarkGreen:
+          Result := (
+            (r mod 96) div 6 + 1,
+            g < 128 ? (g mod 64) div 4 + 1 : 16 - (g mod 64) div 4,
+            (b mod 64) div 4 + 1
+          );
+        Color.DarkBlue:
+          Result := (
+            (r mod 96) div 6 + 1,
+            (g mod 64) div 4 + 1,
+            b < 128 ? (b mod 64) div 4 + 1 : 16 - (b mod 64) div 4
+          );
+        Color.DarkMagenta:
+          Result := (
+            r < 128 ? (r mod 32) div 2 + 1 : 16 - (r mod 32) div 2,
+            (g mod 128) div 8 + 1,
+            16 - (b mod 128) div 8
+          );
+        Color.DarkYellow:
+          Result := (
+            r < 128 ? (r mod 32) div 2 + 1 : 16 - (r mod 32) div 2,
+            16 - (g mod 128) div 8,
+            (b mod 128) div 8 + 1
+          );
+        Color.DarkCyan:
+          Result := (
+            (r mod 96) div 6 + 1,
+            g < 128 ? (g mod 64) div 4 : 16 - (g mod 64) div 4,
+            b < 128 ? (b mod 64) div 4 : 16 - (b mod 64) div 4
+          );
+        Color.Red:
+          Result := (
+            16 - (r mod 96) div 6,
+            (g mod 128) div 8,
+            (b mod 128) div 8
+          );
+        Color.Green:
+          Result := (
+            (r mod 96) div 6 + 1,
+            16 - (g mod 64) div 4,
+            (b mod 128) div 8 + 1
+          );
+        Color.Blue:
+          Result := (
+            (r mod 96) div 6 + 1,
+            (g mod 128) div 8 + 1,
+            16 - (b mod 96) div 6
+          );
+        Color.Magenta:
+          Result := (
+            16 - (r mod 96) div 6,
+            (g mod 128) div 8 + 1,
+            16 - (b mod 128) div 8
+          );
+        Color.Yellow:
+          Result := (
+            16 - (r mod 96) div 6,
+            16 - (g mod 128) div 8,
+            (b mod 128) div 8 + 1
+          );
+        Color.Cyan:
+          Result := (
+            (r mod 96) div 6 + 1,
+            16 - (g mod 128) div 8,
+            16 - (b mod 128) div 8
+          );
+      end;
+    end;
+    
+    public static function RGBToSubColor(t: RGBToColorConvertType; a: KTX.Color; r, g, b: byte): (integer, integer, integer);
+    begin
+      case t of
+        RGBToColorConvertType.old: Result := (OldRGBToSubColor(a, r, g, b));
+        RGBToColorConvertType.new: Result := (NewRGBToSubColor(a, r, g, b));
       end;
     end;
   end;
@@ -858,11 +982,13 @@ type
       Result.Symbol:=' ';
       Result.Back:=RGBConsole.RGBToColor(_RGBConvertingType,r,g,b);
       
-      var RR := (r mod 16) + 1;
-      var GG := (g mod 16) + 1;
-      var BB := (b mod 16) + 1;
-      Result.Symbol := Context[Round(Arr(RR,GG,BB).Average)];
-      Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType,RR*16,GG*16,BB*16);
+      var RR, GG, BB: integer;
+      
+      (RR, GG, BB) := RGBConsole.RGBToSubColor(_RGBConvertingType,Result.Back, r, g, b);
+      
+      Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
+      //Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
+      Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
       
       case bg of
         Color.Black: if (r = RGBConsole.Black.R) and (g = RGBConsole.Black.G) and (b = RGBConsole.Black.B) then Result.Symbol := 'T';
