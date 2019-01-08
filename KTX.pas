@@ -6,11 +6,13 @@ unit KTX;
 
 uses System.Drawing;
 
+{$region Version}
+
 const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 23);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 25);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -18,21 +20,33 @@ function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
 ///Возвращает полное имя с версией
 function StrFull := $'{Name} {StrVersion}';
 
+{$endregion Version}
+
+{$region GlobalMethods}
+
 ///Возвращает true, если данный байт находится в диапазоне от а до b
 function InRange(self: byte; a, b: byte): boolean; extensionmethod;
 begin
   Result := (self >= a) and (self <= b);
 end;
 
-type
+{$endregion GlobalMethods}
+
+{$region SynonimTypes}
   
+type
+
   ///Тип цвета консоли
   Color = System.ConsoleColor;
   
   ///Тип клавиши консоли
   Key = System.ConsoleKey;
 
+{$endregion SynonimTypes}
+  
+{$region Colors}
 const
+  
   ///Чёрный
   Black = Color.Black;
   ///Тёмно-синий
@@ -66,8 +80,11 @@ const
   ///Белый
   White = Color.White;
   
+{$endregion}
+  
+{$region Console}
 type
-
+  
   ///Класс, содержащий методы для работы с консолью
   Console = static class
     private const Err1: string = 'Window size too small';
@@ -473,6 +490,10 @@ type
     public static function operator implicit(a: KeyBlock): boolean := a._status;
   end;
   
+{$endregion Console}
+  
+{$region Drawing}
+type
   ///Класс, содержащий методы преобразования цвета консоли в целые десятичные и шестнадцатиричные числа и обратно
   ConvertColor = static class
     ///Переводит цвет консоли в целое число (byte)
@@ -512,9 +533,13 @@ type
   RGBToColorConvertType = (
     ///Тип конвертации версии 2.0.2
     ///Больше подходит для чёрно-белых фотографий
-    old,
+    v20,
     ///Новый тип конвертации
-    &new
+    &New,
+    ///Экспериментальный тип конвертации
+    Exp64,
+    ///Экспериментальный тип конвертации
+    Exp128
   );
   
   ///Класс, содержащий значения цветов консоли в виде RGB
@@ -607,7 +632,7 @@ type
       or ((R.InRange(96,159)) and (G.InRange(64,127)) and (B.InRange(192,255))) then Result := _darkmagenta.ConsoleColor;
       
       //Тёмно-жёлтый цвет
-      if ((R.InRange(96,159)) and (G.InRange(127,255)) and (B.InRange(0,63)))
+      if ((R.InRange(96,159)) and (G.InRange(128,255)) and (B.InRange(0,63)))
       or ((R.InRange(96,159)) and (G.InRange(192,255)) and (B.InRange(0,127))) then Result := _darkyellow.ConsoleColor;
       
       //Тёмно-голубой цвет
@@ -629,7 +654,7 @@ type
       or ((R.InRange(160,255)) and (G.InRange(64,127)) and (B.InRange(192,255))) then Result := _magenta.ConsoleColor;
       
       //Жёлтый цвет
-      if ((R.InRange(160,255)) and (G.InRange(127,255)) and (B.InRange(0,63)))
+      if ((R.InRange(160,255)) and (G.InRange(128,255)) and (B.InRange(0,63)))
       or ((R.InRange(160,255)) and (G.InRange(192,255)) and (B.InRange(0,127))) then Result := _yellow.ConsoleColor;
       
       //Голубой цвет
@@ -666,12 +691,14 @@ type
     public static function RGBToColor(a: RGBToColorConvertType; r, g, b: byte): Color;
     begin
       case a of
-        old: Result := OldRGBToColor(r, g, b);
-        &new: Result := FromRGB(r, g, b);
+        v20: Result := OldRGBToColor(r, g, b);
+        &New, Exp64, Exp128: Result := FromRGB(r, g, b);
+        else raise new System.Exception;
       end;
     end;
     
-    ///Пожилое преобразование RGB в набор RGB меньше 16 (для цвета текста)
+    ///Старое преобразование RGB на основе текущего цвета в набор (1..16, 1..16, 1..16)
+    ///Служит для определения цвета текста
     public static function OldRGBToSubColor(a: KTX.Color; r, g, b: byte): (integer, integer, integer);
     begin
       case a of
@@ -689,6 +716,8 @@ type
       end;
     end;
     
+    ///Новое проеобразование RGB на основе текущего цвета в набор (1..16, 1..16, 1..16)
+    ///Служит для определения цвета текста
     public static function NewRGBToSubColor(a: KTX.Color; r, g, b: byte): (integer, integer, integer);
     begin
       case a of      
@@ -745,14 +774,14 @@ type
         Color.DarkCyan:
           Result := (
             (r mod 96) div 6 + 1,
-            g < 128 ? (g mod 64) div 4 : 16 - (g mod 64) div 4,
-            b < 128 ? (b mod 64) div 4 : 16 - (b mod 64) div 4
+            g < 128 ? (g mod 64) div 4 + 1: 16 - (g mod 64) div 4,
+            b < 128 ? (b mod 64) div 4 + 1: 16 - (b mod 64) div 4
           );
         Color.Red:
           Result := (
             16 - (r mod 96) div 6,
-            (g mod 128) div 8,
-            (b mod 128) div 8
+            (g mod 128) div 8 + 1,
+            (b mod 128) div 8 + 1
           );
         Color.Green:
           Result := (
@@ -787,11 +816,32 @@ type
       end;
     end;
     
+    public static function Experimental128(a: KTX.Color; r, g, b: byte): (integer, integer, integer);
+    begin
+      Result := (
+        r < 128 ? (r mod 128) div 8 + 1 : 16 - (r mod 128) div 8,
+        g < 128 ? (g mod 128) div 8 + 1 : 16 - (g mod 128) div 8,
+        b < 128 ? (b mod 128) div 8 + 1 : 16 - (b mod 128) div 8
+      );
+    end;
+    
+    public static function Experimental64(a: KTX.Color; r, g, b: byte): (integer, integer, integer);
+    begin
+      Result := (
+        r < 128 ? (r mod 64) div 4 + 1 : 16 - (r mod 64) div 4,
+        g < 128 ? (g mod 64) div 4 + 1 : 16 - (g mod 64) div 4,
+        b < 128 ? (b mod 64) div 4 + 1 : 16 - (b mod 64) div 4
+      );
+    end;
+    
+    ///t-Преобразование RGB на основе текущего цвета в набор (1..16, 1..16, 1..16)
     public static function RGBToSubColor(t: RGBToColorConvertType; a: KTX.Color; r, g, b: byte): (integer, integer, integer);
     begin
       case t of
-        RGBToColorConvertType.old: Result := (OldRGBToSubColor(a, r, g, b));
-        RGBToColorConvertType.new: Result := (NewRGBToSubColor(a, r, g, b));
+        RGBToColorConvertType.v20: Result := (OldRGBToSubColor(a, r, g, b));
+        RGBToColorConvertType.New: Result := (NewRGBToSubColor(a, r, g, b));
+        RGBToColorConvertType.Exp64: Result := (Experimental64(a, r, g, b));
+        RGBToColorConvertType.Exp128: Result := (Experimental128(a, r, g, b));
       end;
     end;
   end;
@@ -986,9 +1036,17 @@ type
       
       (RR, GG, BB) := RGBConsole.RGBToSubColor(_RGBConvertingType,Result.Back, r, g, b);
       
-      Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
-      //Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
-      Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
+      try
+        Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
+        Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
+      except
+        on System.Exception do
+        begin
+          writeln(r, ' ', g, ' ', b);
+          writeln(RR*16,' ',GG*16,' ',BB*16,' ',Result.Back,' ',RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16));
+          readln;
+        end;
+      end;
       
       case bg of
         Color.Black: if (r = RGBConsole.Black.R) and (g = RGBConsole.Black.G) and (b = RGBConsole.Black.B) then Result.Symbol := 'T';
@@ -1267,6 +1325,8 @@ procedure Draw(self: DrawBoxBlock; isoverlay: boolean); extensionmethod := Drawi
 ///Рисует текущий объект в консоли со всеми стандартными значениями
 procedure Draw(self: DrawBoxBlock); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
 
+{$endregion Drawing}
+  
 begin
   
 end.
