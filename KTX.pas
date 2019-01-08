@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 26);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 27);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -84,6 +84,13 @@ const
   
 {$region Console}
 type
+  
+  SeparateType = (
+    ///Метод, основанный на списке
+    ListMethod,
+    ///Метод, предложенный SunSerega, медленнее на 30%
+    SunMethod
+  );
   
   ///Класс, содержащий методы для работы с консолью
   Console = static class
@@ -322,6 +329,84 @@ type
     begin
       Init();
     end;
+    
+    private static function SizeSeparateMy(x: integer; s: array of string): sequence of string;
+    begin
+      var PreRes := new List<string>;
+      for var i:=0 to s.Length-1 do
+      begin
+        var StrBuild := new StringBuilder;
+        var TWds := s[i].ToWords;
+        if TWds<>nil then
+          for var j:=0 to TWds.Length-1 do
+          begin
+            if StrBuild.length + TWds[j].length < x then
+            begin
+              if j>0 then StrBuild+=' ';
+              StrBuild += TWds[j];
+            end
+            else
+            begin
+              PreRes += StrBuild.ToString;
+              StrBuild := TWds[j];
+            end;
+          end;
+        if StrBuild.ToString<>'' then
+          PreRes += StrBuild.ToString;
+      end;
+      //yield sequence PreRes; TODO
+      Result := PreRes;//Тупой костыль пока не исправят #1639, медленнее в 27000 раз
+    end;
+    
+    private static function SizeSeparateMy(x: integer; s: string) := SizeSeparateMy(x, Arr(s));
+  
+    private static function SizeSeparateSun(x: integer; s: array of string): sequence of string;
+    begin
+      var res := new StringBuilder(x);
+      
+      foreach var nw in s.SelectMany(l -> l.ToWords()) do
+      begin
+        var w: string;
+        if res.Length=0 then
+          w := nw else
+          w := ' ' + nw;
+        
+        if res.Length + w.Length < x then
+          res.Append(w) else
+        begin
+          //yield res.ToString; TODO
+          res.Clear;
+          res.Append(nw);
+        end;
+      end;
+      if res.Length <> 0 then
+        //yield res.ToString; TODO
+    end;
+    
+    private static function SizeSeparateSun(x: integer; s: string): sequence of string;
+    begin
+      Result := SizeSeparateSun(x,Arr(s));
+    end;
+  
+    private static _separatetype: SeparateType := SeparateType.ListMethod;
+    
+    private static procedure SetSizeSeparateType(a: SeparateType) := _separatetype := a;
+    
+    ///Возвращает или задаёт тип разделения текста по строкам
+    public static property SizeSeparateType: SeparateType read _separatetype write SetSizeSeparateType;
+    
+    ///Возвращает массив строк, разделённых по заданной длине способом переноса t
+    public static function SizeSeparate(t: SeparateType; x: integer; params s: array of string): sequence of string;
+    begin
+      case t of
+        SeparateType.ListMethod: Result := SizeSeparateMy(x, s);
+        //SeparateType.SunMethod: Result := SizeSeparateSun(x, s);
+        else raise new System.Exception;
+      end;
+    end;
+    
+    ///Возвращает массив строк, разделённых по заданной длине стандартным способом переноса
+    public static function SizeSeparate(x: integer; params s: array of string): sequence of string := SizeSeparate(_separatetype, x, s);
   end;
   
   ///Представляет класс псевдоокна
@@ -490,6 +575,10 @@ type
     public static function operator implicit(a: KeyBlock): boolean := a._status;
   end;
   
+function SizeSeparate(x: integer; params s: array of string) := Console.SizeSeparate(x, s);
+
+function SizeSeparate(self: string; x: integer): sequence of string; extensionmethod := SizeSeparate(x, self);
+
 {$endregion Console}
   
 {$region Drawing}
