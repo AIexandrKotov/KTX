@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 25);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 26);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -598,6 +598,29 @@ type
     ///RGB Фиолетового цвета консоли
     public static property Magenta: RGBColor read _magenta;
     
+    public static function ColorEquality(c: Color; R, G, B: byte): boolean;
+    begin
+      Result := false;
+      case c of
+        Color.Black: if (r = _Black.R) and (g = _Black.G) and (b = _Black.B) then Result := true;
+        Color.Gray: if (r = _Gray.R) and (g = _Gray.G) and (b = _Gray.B) then Result := true;
+        Color.DarkGray: if (r = _DarkGray.R) and (g = _DarkGray.G) and (b = _DarkGray.B) then Result := true;
+        Color.White: if (r = _White.R) and (g = _White.G) and (b = _White.B) then Result := true;
+        Color.DarkBlue: if (r = _DarkBlue.R) and (g = _DarkBlue.G) and (b = _DarkBlue.B) then Result := true;
+        Color.DarkGreen: if (r = _DarkGreen.R) and (g = _DarkGreen.G) and (b = _DarkGreen.B) then Result := true;
+        Color.DarkCyan: if (r = _DarkCyan.R) and (g = _DarkCyan.G) and (b = _DarkCyan.B) then Result := true;
+        Color.DarkRed: if (r = _DarkRed.R) and (g = _DarkRed.G) and (b = _DarkRed.B) then Result := true;
+        Color.DarkMagenta: if (r = _DarkMagenta.R) and (g = _DarkMagenta.G) and (b = _DarkMagenta.B) then Result := true;
+        Color.DarkYellow: if (r = _DarkYellow.R) and (g = _DarkYellow.G) and (b = _DarkYellow.B) then Result := true;
+        Color.Blue: if (r = _Blue.R) and (g = _Blue.G) and (b = _Blue.B) then Result := true;
+        Color.Green: if (r = _Green.R) and (g = _Green.G) and (b = _Green.B) then Result := true;
+        Color.Cyan: if (r = _Cyan.R) and (g = _Cyan.G) and (b = _Cyan.B) then Result := true;
+        Color.Red: if (r = _Red.R) and (g = _Red.G) and (b = _Red.B) then Result := true;
+        Color.Magenta: if (r = _Magenta.R) and (g = _Magenta.G) and (b = _Magenta.B) then Result := true;
+        Color.Yellow: if (r = _Yellow.R) and (g = _Yellow.G) and (b = _Yellow.B) then Result := true;
+      end;
+    end;
+    
     ///Новое преобразование
     public static function FromRGB(R, G, B: byte): Color;
     begin
@@ -997,6 +1020,8 @@ type
   
   ///Содержит методы для рисования
   Drawing = static class
+    ///Символы вывода
+    public const Context = ' .:;t08SX%&#@░▒▓';
     private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.new;
     private static _DefaultAlignmentType: DrawingAlignmentType := DrawingAlignmentType.Center;
     private static _DefaultIsOverlay := false;
@@ -1021,9 +1046,6 @@ type
     
     ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
     public static function ARGBPixelToDrawBox(x, y: integer; bg: Color; a, r, g, b: byte): DrawBox;
-    const
-      ///Длина обязательно 16
-      Context = ' .:;t08SX%&#@░▒▓';
     begin
       Result := new DrawBox();
       
@@ -1039,24 +1061,7 @@ type
       Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
       Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
       
-      case bg of
-        Color.Black: if (r = RGBConsole.Black.R) and (g = RGBConsole.Black.G) and (b = RGBConsole.Black.B) then Result.Symbol := 'T';
-        Color.Gray: if (r = RGBConsole.Gray.R) and (g = RGBConsole.Gray.G) and (b = RGBConsole.Gray.B) then Result.Symbol := 'T';
-        Color.DarkGray: if (r = RGBConsole.DarkGray.R) and (g = RGBConsole.DarkGray.G) and (b = RGBConsole.DarkGray.B) then Result.Symbol := 'T';
-        Color.White: if (r = RGBConsole.White.R) and (g = RGBConsole.White.G) and (b = RGBConsole.White.B) then Result.Symbol := 'T';
-        Color.DarkBlue: if (r = RGBConsole.DarkBlue.R) and (g = RGBConsole.DarkBlue.G) and (b = RGBConsole.DarkBlue.B) then Result.Symbol := 'T';
-        Color.DarkGreen: if (r = RGBConsole.DarkGreen.R) and (g = RGBConsole.DarkGreen.G) and (b = RGBConsole.DarkGreen.B) then Result.Symbol := 'T';
-        Color.DarkCyan: if (r = RGBConsole.DarkCyan.R) and (g = RGBConsole.DarkCyan.G) and (b = RGBConsole.DarkCyan.B) then Result.Symbol := 'T';
-        Color.DarkRed: if (r = RGBConsole.DarkRed.R) and (g = RGBConsole.DarkRed.G) and (b = RGBConsole.DarkRed.B) then Result.Symbol := 'T';
-        Color.DarkMagenta: if (r = RGBConsole.DarkMagenta.R) and (g = RGBConsole.DarkMagenta.G) and (b = RGBConsole.DarkMagenta.B) then Result.Symbol := 'T';
-        Color.DarkYellow: if (r = RGBConsole.DarkYellow.R) and (g = RGBConsole.DarkYellow.G) and (b = RGBConsole.DarkYellow.B) then Result.Symbol := 'T';
-        Color.Blue: if (r = RGBConsole.Blue.R) and (g = RGBConsole.Blue.G) and (b = RGBConsole.Blue.B) then Result.Symbol := 'T';
-        Color.Green: if (r = RGBConsole.Green.R) and (g = RGBConsole.Green.G) and (b = RGBConsole.Green.B) then Result.Symbol := 'T';
-        Color.Cyan: if (r = RGBConsole.Cyan.R) and (g = RGBConsole.Cyan.G) and (b = RGBConsole.Cyan.B) then Result.Symbol := 'T';
-        Color.Red: if (r = RGBConsole.Red.R) and (g = RGBConsole.Red.G) and (b = RGBConsole.Red.B) then Result.Symbol := 'T';
-        Color.Magenta: if (r = RGBConsole.Magenta.R) and (g = RGBConsole.Magenta.G) and (b = RGBConsole.Magenta.B) then Result.Symbol := 'T';
-        Color.Yellow: if (r = RGBConsole.Yellow.R) and (g = RGBConsole.Yellow.G) and (b = RGBConsole.Yellow.B) then Result.Symbol := 'T';
-      end;
+      if RGBConsole.ColorEquality(bg,r,g,b) then Result.Symbol := 'T';
     end;
     
     ///Преобразует файл-рисунок в экземпляр класса DrawBoxBlock
