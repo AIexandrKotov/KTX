@@ -1036,17 +1036,8 @@ type
       
       (RR, GG, BB) := RGBConsole.RGBToSubColor(_RGBConvertingType,Result.Back, r, g, b);
       
-      try
-        Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
-        Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
-      except
-        on System.Exception do
-        begin
-          writeln(r, ' ', g, ' ', b);
-          writeln(RR*16,' ',GG*16,' ',BB*16,' ',Result.Back,' ',RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16));
-          readln;
-        end;
-      end;
+      Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
+      Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
       
       case bg of
         Color.Black: if (r = RGBConsole.Black.R) and (g = RGBConsole.Black.G) and (b = RGBConsole.Black.B) then Result.Symbol := 'T';
