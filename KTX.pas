@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 28);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 29);
 
 ///Возвращает строковое представление о текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -289,6 +289,9 @@ type
       IsInit:=true;
     end;
     
+    ///Читает клавишу из потока, не выводя её на экран
+    public static function ReadKey := System.Console.ReadKey(true);
+    
     ///Выводит на экран текст
     ///Если в качестве аргумента использован цвет консоли, то меняет цвет текста на этот цвет-аргумент
     public static procedure Draw(params o: array of object);
@@ -325,7 +328,7 @@ type
       DrawLn(o);
     end;
     
-    public static constructor;
+    private static constructor;
     begin
       Init();
     end;
@@ -586,32 +589,34 @@ type
     public static function operator implicit(a: KeyBlock): boolean := a._status;
   end;
 
+{$region SizeSeparates Overloads}
+
 ///Возвращает последовательность строк, разделённых по заданной длине способом переноса t
 function SizeSeparate(t: SeparateType; x: integer; params s: array of string) := Console.SizeSeparate(t, x, s);
 
 ///Возвращает последовательность строк, разделённых по заданной длине способом переноса t
-function SizeSeparate(self: array of string; t: SeparateType; x: integer): sequence of string; extensionmethod := SizeSeparate(t, x, self);
+function SizeSeparate(self: array of string; t: SeparateType; x: integer): sequence of string; extensionmethod := Console.SizeSeparate(t, x, self);
 
 ///Возвращает последовательность строк, разделённых по заданной длине способом переноса t
-function SizeSeparate(self: string; t: SeparateType; x: integer): sequence of string; extensionmethod := SizeSeparate(t, x, self);
+function SizeSeparate(self: string; t: SeparateType; x: integer): sequence of string; extensionmethod := Console.SizeSeparate(t, x, self);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли способом переноса t
 function SizeSeparate(t: SeparateType; params s: array of string) := Console.SizeSeparate(t, Console._width, s);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли способом переноса t
-function SizeSeparate(self: array of string; t: SeparateType): sequence of string; extensionmethod := SizeSeparate(t, Console._width, self);
+function SizeSeparate(self: array of string; t: SeparateType): sequence of string; extensionmethod := Console.SizeSeparate(t, Console._width, self);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли способом переноса t
-function SizeSeparate(self: string; t: SeparateType): sequence of string; extensionmethod := SizeSeparate(t, Console._width, self);
+function SizeSeparate(self: string; t: SeparateType): sequence of string; extensionmethod := Console.SizeSeparate(t, Console._width, self);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли с отступами по краям способом переноса t
 function SizeSeparateWSpaces(t: SeparateType; params s: array of string) := Console.SizeSeparate(t, Console._width - 2, s);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли с отступами по краям способом переноса t
-function SizeSeparateWSpaces(self: array of string; t: SeparateType): sequence of string; extensionmethod := SizeSeparate(t, Console._width - 2, self);
+function SizeSeparateWSpaces(self: array of string; t: SeparateType): sequence of string; extensionmethod := Console.SizeSeparate(t, Console._width - 2, self);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли с отступами по краям способом переноса t
-function SizeSeparateWSpaces(self: string; t: SeparateType): sequence of string; extensionmethod := SizeSeparate(t, Console._width - 2, self);
+function SizeSeparateWSpaces(self: string; t: SeparateType): sequence of string; extensionmethod := Console.SizeSeparate(t, Console._width - 2, self);
 
 ///Возвращает последовательность строк, разделённых по заданной длине стандартным способом переноса
 function SizeSeparate(x: integer; params s: array of string) := Console.SizeSeparate(Console._separatetype, x, s);
@@ -652,6 +657,8 @@ end;
 ///Выводит последовательность строк, полученных методом SizeSeparateWSpaces, начиная со второй строки
 ///Возвращает саму последовательность
 function PrintSeparated(self: sequence of string): sequence of string; extensionmethod := self.PrintSeparated(1);
+
+{$endregion SizeSeparates Overloads}
 
 {$endregion Console}
   
