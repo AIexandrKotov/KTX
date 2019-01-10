@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 30);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 33);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -507,7 +507,7 @@ type
           Console.SetCursorPosition(1,size+start+2);
           Console.SetCursorPosition(1,size+start+1);
         end
-        else Console.SetCursorPosition(1,Console.Height+1);
+        else Console.SetCursorPosition(1,Console.Height-2);
         write(': ');
         readln(s);
       end;
