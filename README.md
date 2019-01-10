@@ -33,7 +33,9 @@ var b := new KTX.Block;
 У блока есть три основных свойства:<br/><br/>
 <b>Status</b> — показатель, который влияет на продолжение цикла по текущему блоку, после создания имеет значение true, зачение false выставляется методом <code>.Close</code><br/><br/>
 <b>Input</b> — строка, введённая пользователем в консоль, заполняется с помощью <code>.Read</code>, обнуляется с помощью <code>.Reload</code><br/><br/>
-<b>Output</b> — целое число, ни на что не влияет, просто дополнительная переменная. Обнуляется до <code>integer.MinValue</code> в <code>.Reload</code> каждую итерацию цикла. Обычно используется как индекс массива при выводе списков.<br/>
+<b>Output</b> — целое число, ни на что не влияет, просто дополнительная переменная. Обнуляется до <code>integer.MinValue</code> в <code>.Reload</code> каждую итерацию цикла. Обычно используется как индекс массива при выводе списков.<br/><br/>
+И одно дополнительное:<br/><br/>
+<b>OutIsDigit</b> — возвращает true, если Input является целым числом. Внутри себя единожды на итерацию проводит вычисление Output, которое получает числовое представление Input, из-за чего очень удобно использовать конструкцию <code>if (b.OutIsDigit) and (b.Output > 100) then</code>
 
 Что бы использовать блок, нужно начать цикл, в котором в качестве условия будет указано название блока. Рекомендется использовать цикл <b>while</b>. Типичный блок выглядит так:
 ```pas
@@ -53,7 +55,7 @@ begin
   end;
 end.
 ```
-b.Reload всегда должно быть перед всем остальным, так как оно очищает консоль<br/>
+<code>b.Reload</code> всегда должно быть перед всем остальным, так как оно очищает консоль<br/>
 Самым первым условием обычно прописывается выход из блока: <code>if b.Input='0' then b.Close;</code><br/><br/>
 Простейшая программа, выводящая меню будущей игры:<br/>
 ```pas
@@ -78,30 +80,59 @@ end.
 ```
 ![npp7](https://user-images.githubusercontent.com/44296606/50459403-d0c96e00-097b-11e9-90f4-25a40257a489.png)
 
-## Использование вывода KTX.Drawing и файлов .ktx
-Что бы конвертировать картинку в DrawBoxBlock (который является аргументом для вывода в процедурах Drawing.DrawAll, Drawing.HexDraw и т.д.), для начала необходимо создать картинку. Давайте возьмём следующую, размером 100x30 (стандартный размер консоли KTX):<br/>
+Для вывода списков используются методы <code>Console.Resize(<начальная позиция списка>, <размер списка>)</code> и <code>b.ReadWithResize(<начальная позиция списка>, <размер списка>)</code>
 
-![image.png](https://user-images.githubusercontent.com/44296606/50459244-81367280-097a-11e9-887f-65d4719c8131.png)
-<br/>
-Для того, что бы вывести её в консоль, необходимо написать следующий код:<br/>
+Следующий код реализует список из 50-ти элементов, в каждый из которых можно "заглянуть".
 ```pas
 uses KTX;
 
 begin
-  var a := KTX.Drawing.BitMapToDrawBoxBlock('image.png');
-  Console.SetWindowSize(a.SizeX,a.SizeY);//Желательно, но можно обойтись и без этого
-  KTX.Drawing.HexDraw(a);
-  readln;
+  var b := new KTX.Block;
+  while b do
+  begin
+    b.Reload;
+    
+    var first := 1;
+    var count := 50;
+      
+    Console.Resize(first, count);
+    
+    for var i:=0 to count-1 do
+      Console.DrawOn(1, first+i, $'({i+1}) ...');
+    
+    b.ReadWithResize(first, count);
+    
+    if b.Input = '0' then b.Close;
+    
+    if (b.OutIsDigit) and (b.Output > 0) and (b.Output <= count) then
+    begin
+      var bb := new KTX.Block;
+      while bb do
+      begin
+        bb.Reload;
+        
+        Console.DrawOn(1, 1, $'Элемент списка #{b.Output}');
+        
+        bb.Read;
+        
+        if bb.Input = '0' then bb.Close;
+      end;
+    end;
+  end;
 end.
 ```
-И на выходе мы получим следующее:<br/>
-![npp6](https://user-images.githubusercontent.com/44296606/50459349-4b45be00-097b-11e9-9f01-26d19a07ead9.png)
 
-Что бы сохранить эту "картинку" в .ktx, нужно написать `a.WriteKTXFile('a.ktx');`<br/>
-Что бы загрузить её из файла .ktx, нужно написать `var b := new KTX.DrawBoxBlock('a.ktx');`
+## 4. Блоки KTX.KeyBlock
+<code>Этот раздел разрабатывается</code>
 
+## 5. Класс KTX.Drawing и его использование
+<code>Этот раздел разрабатывается</code>
+
+## 6. Методы KTX.Console
+<code>Этот раздел разрабатывается</code>
 
 ## Лицензия
+<code>Ожидается переделка</code><br/>
 Вы можете встраивать этот .pcu-модуль в свои программы, с указанием где-либо в ней следующего:<br/>
 <b>1) Моего имени: </b> Александр Котов</br>
 <b>2) Ссылки на мой VK: </b> vk.com/id219453333</br>
