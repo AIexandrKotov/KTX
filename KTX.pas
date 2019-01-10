@@ -12,9 +12,9 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 29);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 30);
 
-///Возвращает строковое представление о текущей версии модуля
+///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
 
 ///Возвращает полное имя с версией
@@ -275,7 +275,7 @@ type
     ///Изменяет размер буфера исходя из start и size
     public static procedure Resize(start, size: integer);
     begin
-      if size>=(_Height-start) then Console.SetBufferSize(size+start);
+      if size>=(_Height-start-3) then Console.SetBufferSize(size+start+3);
     end;
     
     ///Инициализирует стандартные значения
@@ -436,9 +436,13 @@ type
     private _output: integer;
     ///--
     private _status: boolean;
+    ///--
+    private _inthistick: boolean;
+    ///--
+    private _last: boolean;
     
     ///Изменяет вывод
-    public procedure SetOut(a: integer);
+    private procedure SetOut(a: integer);
     begin
       _output:=a;
     end;
@@ -472,8 +476,9 @@ type
     public procedure Reload();
     begin
       Console.Resize;
-      _input:=Null;
-      _output:=Zero;
+      _input := Null;
+      _output := Zero;
+      _inthistick := false;
     end;
     
     ///Ввод
@@ -499,16 +504,43 @@ type
       begin
         if size>=(Console.Height-start) then
         begin
-          Console.SetCursorPosition(1,size+start-1);
-          Console.SetCursorPosition(1,size+start-2);
+          Console.SetCursorPosition(1,size+start+2);
+          Console.SetCursorPosition(1,size+start+1);
         end
-        else Console.SetCursorPosition(1,Console.Height-2);
+        else Console.SetCursorPosition(1,Console.Height+1);
         write(': ');
         readln(s);
       end;
       _input:=s;
       Console.After;
     end;
+    
+    ///Даёт свойству Output числовое значение Input, возвращает true, если преобразование выполнено успешно
+    ///Если rec = false, то на одной итерации цикла проводит действие только один раз
+    public function CalculateOut(rec: boolean): boolean;
+    begin
+      if (not _inthistick) or (rec) then
+      begin
+        var e: integer;
+        
+        val(_input, _output, e);
+        if e = 0 then _last := true else _last := false;
+        
+        Result := _last;
+        _inthistick := true;
+      end else Result := _last;
+    end;
+    
+    ///Даёт свойству Output числовое значение Input, возвращает true, если преобразование выполнено успешно
+    ///На каждой итерации цикла проводит действие только один раз
+    public function CalculateOut: boolean := CalculateOut(false);
+    
+    ///Даёт свойству Output числовое значение Input, возвращает true, если преобразование выполнено успешно
+    ///На каждой итерации цикла проводит действие сколь угодно раз
+    public function RecalculateOut: boolean := CalculateOut(true);
+    
+    ///Возвращает значение, является ли Input является целым числом
+    public property OutIsDigit: boolean read CalculateOut;
     
     ///Возвращает Input текущего псевдоокна
     public function ToString: string; override := _input;
@@ -1192,7 +1224,7 @@ type
   Drawing = static class
     ///Символы вывода
     public const Context = ' .:;t08SX%&#@░▒▓';
-    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.new;
+    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.New;
     private static _DefaultAlignmentType: DrawingAlignmentType := DrawingAlignmentType.Center;
     private static _DefaultIsOverlay := false;
     private static _DefaultDrawingType: DrawingType := DrawingType.Aline;
