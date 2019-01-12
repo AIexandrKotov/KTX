@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 33);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 35);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -201,7 +201,11 @@ type
     ///Действительная ширина окна консоли
     public static property RealWidth: integer read System.Console.WindowWidth;
     
+    ///Задаёт размеры окна консоли текущими значениями ширины и высоты окна
+    public static procedure SetWindowSize() := System.Console.SetWindowSize(_width, _height);
+    
     private static procedure SetWindowWidth(a: integer) := _width := a;
+    
     private static procedure SetWindowHeight(a: integer) := _height := a;
     
     ///Возвращает или задаёт высоту окна консоли
@@ -224,9 +228,6 @@ type
     
     ///Очищает окно консоли, заливая его текущем цветом RealBack
     public static procedure Clear() := System.Console.Clear();
-    
-    ///Задаёт размеры окна консоли текущими значениями ширины и высоты окна
-    public static procedure SetWindowSize() := System.Console.SetWindowSize(_width, _height);
     
     ///Задаёт размеры окна консоли
     public static procedure SetWindowSize(x, y: integer);
@@ -554,6 +555,8 @@ type
     private _stage: array of integer;
     ///-
     private _input: System.ConsoleKeyInfo;
+    ///-
+    private _usekeys: array of Key;
     
     ///Состояние блока
     public property Status: boolean read _status;
@@ -564,13 +567,21 @@ type
     ///Возвращает информацию о введённой клавише
     public property Input: System.ConsoleKeyInfo read _input;
     
+    private procedure SetKeys(a: array of Key) := _usekeys := a;
+    
+    ///Используемые клавиши в блоке
+    ///При нажатии неиспользуемых не будет обновляться консоль
+    public property Keys: array of Key read _usekeys write SetKeys;
+    
     ///Возвращает нажатую клавишу
     public function GetInputKey := _input.Key;
     
     ///Чтение клавиши
     public procedure Read;
     begin
-      _input := System.Console.ReadKey(true);
+      var k := Console.ReadKey;
+      while (not _usekeys.Contains(k.Key))and ((Console.RealHeight=Console.Height) and (Console.RealWidth=Console.Width)) do k := Console.ReadKey;
+      _input := k;
     end;
     
     ///Обновляет консоль
@@ -588,6 +599,18 @@ type
     ///Изменяет значение параметра блока id на значение value
     public procedure SetStage(id, value: integer) := _stage[id] := value;
     
+    ///Прибавляет значение параметра блока id на значение value
+    public procedure IncStage(id, value: integer) := _stage[id] += value;
+    
+    ///Прибавляет значение параметра блока id на 1
+    public procedure IncStage(id: integer) := _stage[id] += 1;
+    
+    ///Убавляет значение параметра блока id на значение value
+    public procedure DecStage(id, value: integer) := _stage[id] -= value;
+    
+    ///Убавляет значение параметра блока id на 1
+    public procedure DecStage(id: integer) := _stage[id] -= 1;
+    
     ///Изменяет размер параметров блока
     public procedure SetSize(length: integer) := SetLength(_stage,length);
     
@@ -597,24 +620,44 @@ type
       _status := false;
     end;
     
-    ///Создаёт новый экземпляр класс KeyBlock
+    ///Создаёт новый экземпляр класса KeyBlock
     public constructor;
     begin
       Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
-      _stage := new integer[1];
-      _stage[0] := 1;
+      _stage := new integer[](1);
     end;
     
-    ///Создаёт новый экземпляр с указанным числом параметров
-    public constructor(a: integer);
+    ///Создаёт новый экземпляр класса KeyBlock, в котором используются клавиши a
+    public constructor(params a: array of Key);
     begin
       Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
-      _stage := new integer[a];
+      _stage := new integer[](1);
+      _usekeys := a;
+    end;
+    
+    ///Создаёт новый экземпляр класса KeyBlock с указанным числом параметров
+    public constructor(x: integer);
+    begin
+      Console.After;
+      if not Console.IsInit then Console.Init;
+      _status := true;
+      _stage := new integer[x];
       for var i:=0 to _stage.Length-1 do _stage[i] := 1;
+    end;
+    
+    ///Создаёт новый экземпляр класса KeyBlock с указанным числом параметров, в котором используются клавиши a
+    public constructor(x: integer; params a: array of Key);
+    begin
+      Console.After;
+      if not Console.IsInit then Console.Init;
+      _status := true;
+      _stage := new integer[x];
+      for var i:=0 to _stage.Length-1 do _stage[i] := 1;
+      _usekeys := a;
     end;
     
     ///--
