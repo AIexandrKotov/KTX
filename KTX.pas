@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 35);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 36);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -558,11 +558,16 @@ type
     ///-
     private _usekeys: array of Key;
     
+    
+    private function GetStage(ind: integer): integer := _stage[ind];
+    private procedure _SetStage(ind: integer; value: integer) := _stage[ind] := value;
+
+
     ///Состояние блока
     public property Status: boolean read _status;
     
     ///Целочисленные параметры блока
-    public property Stage: array of integer read _stage;
+    public property Stage[ind: integer]: integer read GetStage write _SetStage;
     
     ///Возвращает информацию о введённой клавише
     public property Input: System.ConsoleKeyInfo read _input;
