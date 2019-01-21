@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 36);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 37);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -547,27 +547,61 @@ type
     public function ToString: string; override := _input;
   end;
   
+  ///Представляет класс позиций для KeyBlock
+  StageBlock = class
+    internal _min, _max: integer;
+    internal _current: integer;
+    
+    ///Возвращает или задаёт минимально возможную позицию для текущего StageBlock
+    public property Min: integer read _min write _min := value;
+    
+    ///Возвращает или задаёт максимально возможную позицию для текущего StageBlock
+    public property Max: integer read _max write _max := value;
+    
+    ///Возвращает или задаёт текущую позицию для текущего StageBlock
+    public property Current: integer read _current write _current := value;
+    
+    ///Создаёт новый экземпляр StageBlock
+    public constructor(sbmin, sbmax, sbcur: integer);
+    begin
+      if sbmax < sbmin then raise new System.Exception;
+      if not (sbcur in Range(sbmin,sbmax)) then raise new System.Exception;
+      _min := sbmin;
+      _max := sbmax;
+      _current := sbcur;
+    end;
+    
+    ///Создаёт новый экземпляр StageBlock, присваивая Current значение по умолчанию
+    public constructor(sbmin, sbmax: integer) := Create(sbmin, sbmax, 1);
+  end;
+  
   ///Представляет класс псевдоокна, который управляется клавишами
   KeyBlock = class
     ///-
     private _status: boolean;
     ///-
-    private _stage: array of integer;
+    private _stage: array of StageBlock;
     ///-
     private _input: System.ConsoleKeyInfo;
     ///-
     private _usekeys: array of Key;
     
     
-    private function GetStage(ind: integer): integer := _stage[ind];
-    private procedure _SetStage(ind: integer; value: integer) := _stage[ind] := value;
+    private function GetStage(ind: integer): integer := _stage[ind]._current;
+    private procedure _SetStage(ind: integer; value: integer) := _stage[ind]._current := value;
+    
+    private function GetFStage(ind: integer): StageBlock := _stage[ind];
+    private procedure _SetFStage(ind: integer; value: StageBlock) := _stage[ind] := value;
 
 
     ///Состояние блока
     public property Status: boolean read _status;
     
-    ///Целочисленные параметры блока
+    ///Целочисленные позиции блока
     public property Stage[ind: integer]: integer read GetStage write _SetStage;
+    
+    ///Позиции блока
+    public property FullStage[ind: integer]: StageBlock read GetFStage write _SetFStage;
     
     ///Возвращает информацию о введённой клавише
     public property Input: System.ConsoleKeyInfo read _input;
@@ -585,7 +619,7 @@ type
     public procedure Read;
     begin
       var k := Console.ReadKey;
-      while (not _usekeys.Contains(k.Key))and ((Console.RealHeight=Console.Height) and (Console.RealWidth=Console.Width)) do k := Console.ReadKey;
+      while (not _usekeys.Contains(k.Key)) and ((Console.RealHeight=Console.Height) and (Console.RealWidth=Console.Width)) do k := Console.ReadKey;
       _input := k;
     end;
     
@@ -596,25 +630,20 @@ type
     end;
     
     ///Обновляет консоль
-    public procedure Reload;
+    ///Если передано true, то также проверяет позиции текущего KeyBlock
+    public procedure Reload(CheckStages: boolean);
     begin
+      if CheckStages then
+      for var i := 0 to _stage.Length - 1 do
+      begin
+        if _stage[i]._current < _stage[i]._min then _stage[i]._current := _stage[i]._max;
+        if _stage[i]._current > _stage[i]._max then _stage[i]._current := _stage[i]._min;
+      end;
       Console.Resize;
     end;
     
-    ///Изменяет значение параметра блока id на значение value
-    public procedure SetStage(id, value: integer) := _stage[id] := value;
-    
-    ///Прибавляет значение параметра блока id на значение value
-    public procedure IncStage(id, value: integer) := _stage[id] += value;
-    
-    ///Прибавляет значение параметра блока id на 1
-    public procedure IncStage(id: integer) := _stage[id] += 1;
-    
-    ///Убавляет значение параметра блока id на значение value
-    public procedure DecStage(id, value: integer) := _stage[id] -= value;
-    
-    ///Убавляет значение параметра блока id на 1
-    public procedure DecStage(id: integer) := _stage[id] -= 1;
+    ///Обновляет консоль
+    public procedure Reload := Reload(false);
     
     ///Изменяет размер параметров блока
     public procedure SetSize(length: integer) := SetLength(_stage,length);
@@ -631,7 +660,7 @@ type
       Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
-      _stage := new integer[](1);
+      _stage := new StageBlock[](new StageBlock(1,1));
     end;
     
     ///Создаёт новый экземпляр класса KeyBlock, в котором используются клавиши a
@@ -640,7 +669,7 @@ type
       Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
-      _stage := new integer[](1);
+      _stage := new StageBlock[](new StageBlock(1,1));
       _usekeys := a;
     end;
     
@@ -650,8 +679,8 @@ type
       Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
-      _stage := new integer[x];
-      for var i:=0 to _stage.Length-1 do _stage[i] := 1;
+      _stage := new StageBlock[x];
+      for var i:=0 to _stage.Length-1 do _stage[i] := new StageBlock(1,1);
     end;
     
     ///Создаёт новый экземпляр класса KeyBlock с указанным числом параметров, в котором используются клавиши a
@@ -660,8 +689,8 @@ type
       Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
-      _stage := new integer[x];
-      for var i:=0 to _stage.Length-1 do _stage[i] := 1;
+      _stage := new StageBlock[x];
+      for var i:=0 to _stage.Length-1 do _stage[i] := new StageBlock(1,1);
       _usekeys := a;
     end;
     
