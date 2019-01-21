@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 37);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 38);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -585,6 +585,12 @@ type
     private _input: System.ConsoleKeyInfo;
     ///-
     private _usekeys: array of Key;
+    ///-
+    private _increasers: array of Key;
+    ///-
+    private _decreasers: array of Key;
+    ///-
+    private _stdstage: integer;
     
     
     private function GetStage(ind: integer): integer := _stage[ind]._current;
@@ -592,8 +598,13 @@ type
     
     private function GetFStage(ind: integer): StageBlock := _stage[ind];
     private procedure _SetFStage(ind: integer; value: StageBlock) := _stage[ind] := value;
-
-
+    
+    private function GetIncs(ind: integer): Key := _increasers[ind];
+    private procedure _SetIncs(ind: integer; value: Key) := _increasers[ind] := value;
+    
+    private function GetDecs(ind: integer): Key := _decreasers[ind];
+    private procedure _SetDecs(ind: integer; value: Key) := _decreasers[ind] := value;
+    
     ///Состояние блока
     public property Status: boolean read _status;
     
@@ -602,6 +613,21 @@ type
     
     ///Позиции блока
     public property FullStage[ind: integer]: StageBlock read GetFStage write _SetFStage;
+    
+    ///Возвращает или задаёт клавиши, которые повышают стандартную позицию
+    public property Increasers[ind: integer]: Key read GetIncs write _SetIncs;
+    
+    ///Задаёт новые клавиши повышения позиции
+    public procedure SetIncreasers(a: array of Key) := _increasers := a;
+    
+    ///Задаёт новые клавиши понижения позиции
+    public procedure SetDecreasers(a: array of Key) := _decreasers := a;
+    
+    ///Возвращает или задаёт клавиши, которые понижают стандартную позицию
+    public property Decreasers[ind: integer]: Key read GetDecs write _SetDecs;
+    
+    ///Возвращает или задаёт стандартную позицию, которая будет использована повышателями и понижателями позиций
+    public property StandardStage: integer read _stdstage write _stdstage := value;
     
     ///Возвращает информацию о введённой клавише
     public property Input: System.ConsoleKeyInfo read _input;
@@ -616,18 +642,24 @@ type
     public function GetInputKey := _input.Key;
     
     ///Чтение клавиши
-    public procedure Read;
+    ///Если передано true, то изменяет стандартную позицию
+    public procedure Read(CheckReasers: boolean);
     begin
       var k := Console.ReadKey;
       while (not _usekeys.Contains(k.Key)) and ((Console.RealHeight=Console.Height) and (Console.RealWidth=Console.Width)) do k := Console.ReadKey;
       _input := k;
+      if CheckReasers then
+      begin
+        if _increasers <> nil then
+          if _increasers.Contains(k.Key) then _stage[_stdstage]._current += 1;
+          
+        if _decreasers <> nil then
+          if _decreasers.Contains(k.Key) then _stage[_stdstage]._current -= 1;
+      end;
     end;
     
-    ///Обновляет консоль
-    public procedure Update;
-    begin
-      Console.Resize;
-    end;
+    ///Чтение клавиши
+    public procedure Read := Read(false);
     
     ///Обновляет консоль
     ///Если передано true, то также проверяет позиции текущего KeyBlock
@@ -644,6 +676,9 @@ type
     
     ///Обновляет консоль
     public procedure Reload := Reload(false);
+    
+    ///Обновляет консоль
+    public procedure Update := Reload;
     
     ///Изменяет размер параметров блока
     public procedure SetSize(length: integer) := SetLength(_stage,length);
