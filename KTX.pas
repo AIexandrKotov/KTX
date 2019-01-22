@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 38);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 40);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -219,6 +219,10 @@ type
     
     ///Возвращает максимальную ширину окна консоли
     public static property MaxWidth: integer read System.Console.LargestWindowWidth;
+    
+    private static function _WindowSizeIsActual := (System.Console.WindowHeight=_Height) and (System.Console.WindowWidth=_Width);
+    
+    public static property WindowSizeIsActual: boolean read _WindowSizeIsActual;
     
     ///Устанавливает положение курсора
     public static procedure SetCursorPosition(x, y: integer) := System.Console.SetCursorPosition(x,y);
@@ -487,7 +491,7 @@ type
     begin
       Console.Pre;
       var s: string = '';
-      while (s='') and ((Console.RealHeight=Console.Height) and (Console.RealWidth=Console.Width)) do
+      while (s='') and (Console.WindowSizeIsActual) do
       begin
         Console.SetCursorPosition(1,Console.Height-2);write(': ');
         readln(s);
@@ -501,7 +505,7 @@ type
     begin
       Console.Pre;
       var s: string = '';
-      while (s='') and ((Console.RealHeight=Console.Height) and (Console.RealWidth=Console.Width)) do
+      while (s='') and (Console.WindowSizeIsActual) do
       begin
         if size>=(Console.Height-start) then
         begin
@@ -561,6 +565,8 @@ type
     ///Возвращает или задаёт текущую позицию для текущего StageBlock
     public property Current: integer read _current write _current := value;
     
+    private constructor := exit;
+    
     ///Создаёт новый экземпляр StageBlock
     public constructor(sbmin, sbmax, sbcur: integer);
     begin
@@ -574,6 +580,8 @@ type
     ///Создаёт новый экземпляр StageBlock, присваивая Current значение по умолчанию
     public constructor(sbmin, sbmax: integer) := Create(sbmin, sbmax, 1);
   end;
+  
+  KeyBlockBuilder = class;
   
   ///Представляет класс псевдоокна, который управляется клавишами
   KeyBlock = class
@@ -591,31 +599,23 @@ type
     private _decreasers: array of Key;
     ///-
     private _stdstage: integer;
-    
-    
-    private function GetStage(ind: integer): integer := _stage[ind]._current;
-    private procedure _SetStage(ind: integer; value: integer) := _stage[ind]._current := value;
-    
-    private function GetFStage(ind: integer): StageBlock := _stage[ind];
-    private procedure _SetFStage(ind: integer; value: StageBlock) := _stage[ind] := value;
-    
-    private function GetIncs(ind: integer): Key := _increasers[ind];
-    private procedure _SetIncs(ind: integer; value: Key) := _increasers[ind] := value;
-    
-    private function GetDecs(ind: integer): Key := _decreasers[ind];
-    private procedure _SetDecs(ind: integer; value: Key) := _decreasers[ind] := value;
+    ///-
+    private _stagecheckusing: boolean;
     
     ///Состояние блока
     public property Status: boolean read _status;
     
     ///Целочисленные позиции блока
-    public property Stage[ind: integer]: integer read GetStage write _SetStage;
+    public property Stage[ind: integer]: integer read _stage[ind]._current write _stage[ind]._current := value;
     
     ///Позиции блока
-    public property FullStage[ind: integer]: StageBlock read GetFStage write _SetFStage;
+    public property FullStage[ind: integer]: StageBlock read _stage[ind] write _stage[ind] := value;
     
     ///Возвращает или задаёт клавиши, которые повышают стандартную позицию
-    public property Increasers[ind: integer]: Key read GetIncs write _SetIncs;
+    public property Increasers[ind: integer]: Key read _increasers[ind] write _increasers[ind] := value;
+    
+    ///Возвращает или задаёт клавиши, которые понижают стандартную позицию
+    public property Decreasers[ind: integer]: Key read _decreasers[ind] write _decreasers[ind] := value;
     
     ///Задаёт новые клавиши повышения позиции
     public procedure SetIncreasers(a: array of Key) := _increasers := a;
@@ -623,11 +623,11 @@ type
     ///Задаёт новые клавиши понижения позиции
     public procedure SetDecreasers(a: array of Key) := _decreasers := a;
     
-    ///Возвращает или задаёт клавиши, которые понижают стандартную позицию
-    public property Decreasers[ind: integer]: Key read GetDecs write _SetDecs;
-    
     ///Возвращает или задаёт стандартную позицию, которая будет использована повышателями и понижателями позиций
     public property StandardStage: integer read _stdstage write _stdstage := value;
+    
+    ///Возвращает или задаёт значение, указывающее на то, будут ли происходить проверки позиций в цикле
+    public property StageChecking: boolean read _stagecheckusing write _stagecheckusing := value;
     
     ///Возвращает информацию о введённой клавише
     public property Input: System.ConsoleKeyInfo read _input;
@@ -646,7 +646,7 @@ type
     public procedure Read(CheckReasers: boolean);
     begin
       var k := Console.ReadKey;
-      while (not _usekeys.Contains(k.Key)) and ((Console.RealHeight=Console.Height) and (Console.RealWidth=Console.Width)) do k := Console.ReadKey;
+      while (not _usekeys.Contains(k.Key)) and (Console.WindowSizeIsActual) do k := Console.ReadKey;
       _input := k;
       if CheckReasers then
       begin
@@ -659,7 +659,7 @@ type
     end;
     
     ///Чтение клавиши
-    public procedure Read := Read(false);
+    public procedure Read := Read(_stagecheckusing);
     
     ///Обновляет консоль
     ///Если передано true, то также проверяет позиции текущего KeyBlock
@@ -675,7 +675,7 @@ type
     end;
     
     ///Обновляет консоль
-    public procedure Reload := Reload(false);
+    public procedure Reload := Reload(_stagecheckusing);
     
     ///Обновляет консоль
     public procedure Update := Reload;
@@ -690,49 +690,182 @@ type
     end;
     
     ///Создаёт новый экземпляр класса KeyBlock
-    public constructor;
+    private constructor;
     begin
       Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
-      _stage := new StageBlock[](new StageBlock(1,1));
-    end;
-    
-    ///Создаёт новый экземпляр класса KeyBlock, в котором используются клавиши a
-    public constructor(params a: array of Key);
-    begin
-      Console.After;
-      if not Console.IsInit then Console.Init;
-      _status := true;
-      _stage := new StageBlock[](new StageBlock(1,1));
-      _usekeys := a;
-    end;
-    
-    ///Создаёт новый экземпляр класса KeyBlock с указанным числом параметров
-    public constructor(x: integer);
-    begin
-      Console.After;
-      if not Console.IsInit then Console.Init;
-      _status := true;
-      _stage := new StageBlock[x];
-      for var i:=0 to _stage.Length-1 do _stage[i] := new StageBlock(1,1);
-    end;
-    
-    ///Создаёт новый экземпляр класса KeyBlock с указанным числом параметров, в котором используются клавиши a
-    public constructor(x: integer; params a: array of Key);
-    begin
-      Console.After;
-      if not Console.IsInit then Console.Init;
-      _status := true;
-      _stage := new StageBlock[x];
-      for var i:=0 to _stage.Length-1 do _stage[i] := new StageBlock(1,1);
-      _usekeys := a;
     end;
     
     ///--
     public static function operator implicit(a: KeyBlock): boolean := a._status;
   end;
-
+  
+  ///Представляет строитель для класса KeyBlock
+  KeyBlockBuilder = class
+    private _Stages := new List<StageBlock>;
+    private _StdStage: integer;
+    
+    private _Keys := new List<Key>;
+    private _Increasers := new List<Key>;
+    private _Decreasers := new List<Key>;
+    private _CheckStages: boolean;
+    
+    private function _GetStages(ind: integer): StageBlock := _stages[ind];
+    private function _GetIncreasers(ind: integer): Key := _increasers[ind];
+    private function _GetDecreasers(ind: integer): Key := _decreasers[ind];
+    private function _GetKeys(ind: integer): Key := _Keys[ind];
+    
+    ///Возвращает позиции создаваемого объекта KeyBlock
+    public property Stages[ind: integer]: StageBlock read _GetStages;
+    
+    ///Возвращает повышатели позиций создаваемого объекта KeyBlock
+    public property Increasers[ind: integer]: Key read _GetIncreasers;
+    
+    ///Возвращает понижатели позиций создаваемого объекта KeyBlock
+    public property Decreasers[ind: integer]: Key read _GetDecreasers;
+    
+    ///Возвращает все используемые клавиши создаваемого объекта KeyBlock
+    public property Keys[ind: integer]: Key read _GetKeys;
+    
+    ///Возвращает или задаёт значение, которое показывает, будет ли вестись проверка позиций создаваемого объекта KeyBlock
+    public property CheckStages: boolean read _CheckStages write _CheckStages := value;
+    
+    ///Возвращает или задаёт значение, которое показывает стандартную позицию создаваемого объекта KeyBlock
+    public property StandardStage: integer read _StdStage write _StdStage := value;
+    
+    ///Добавляет клавишу в создаваемый объект KeyBlock
+    public procedure AddKey(a: Key) := _Keys.Add(a);
+    
+    ///Добавляет клавиши в создаваемый объект KeyBlock
+    public procedure AddKeys(a: sequence of Key) := _Keys.AddRange(a);
+    
+    ///Добавляет клавиши в создаваемый объект KeyBlock
+    public procedure AddKeys(params a: array of Key) := AddKeys(a as IEnumerable<Key>);
+    
+    ///Добавляет позицию в создаваемый объект KeyBlock
+    public procedure AddStage(a: StageBlock) := _Stages.Add(a);
+    
+    ///Добавляет позицию в создаваемый объект KeyBlock
+    public procedure AddStage(min, max, cur: integer) := _Stages.Add(new StageBlock(min, max, cur));
+    
+    ///Добавляет позицию в создаваемый объект KeyBlock
+    public procedure AddStage(min, max: integer) := _Stages.Add(new StageBlock(min, max));
+    
+    ///Удаляет позицию с позиции i массива позиций из создаваемого объекта KeyBlock
+    public procedure RemoveStage(i: integer) := _Stages.RemoveAt(i);
+    
+    ///Удаляет позицию из создаваемого объекта KeyBlock
+    public procedure RemoveStage(a: StageBlock) := _Stages.Remove(a);
+    
+    ///Удаляет клавишу из создаваемого объекта KeyBlock
+    public procedure RemoveKey(a: Key) := _Keys.Remove(a);
+    
+    ///Удаляет клавиши из создаваемого объекта KeyBlock
+    public procedure RemoveKeys(a: sequence of Key) := foreach var x in a do _Keys.Remove(x);
+    
+    ///Удаляет клавиши из создаваемого объекта KeyBlock
+    public procedure RemoveKeys(params a: array of Key) := RemoveKeys(a as IEnumerable<Key>);
+    
+    ///Добавляет клавишу, которые повышают позицию, в создаваемый объект KeyBlock
+    public procedure AddIncreaser(a: Key);
+    begin
+      if not _Keys.Contains(a) then _Keys.Add(a);
+      _Increasers.Add(a);
+    end;
+    
+    ///Добавляет клавиши, которые повышают позицию, в создаваемый объект KeyBlock
+    public procedure AddIncreasers(a: sequence of Key);
+    begin
+      foreach var x in a do
+      begin
+        if not _Keys.Contains(x) then _Keys.Add(x);
+        _Increasers.Add(x);
+      end;
+    end;
+    
+    ///Добавляет клавиши, которые повышают позицию, в создаваемый объект KeyBlock
+    public procedure AddIncreasers(params a: array of Key) := AddIncreasers(a as IEnumerable<Key>);
+    
+    ///Удаляет клавиши, которые повышают позицию, из создаваемого объекта KeyBlock
+    public procedure RemoveIncreaser(a: Key);
+    begin
+      RemoveKey(a);
+      _Increasers.Remove(a);
+    end;
+    
+    ///Удаляет клавиши, которые повышают позицию, из создаваемого объекта KeyBlock
+    public procedure RemoveIncreasers(a: sequence of Key) := foreach var x in a do RemoveIncreaser(x);
+    
+    ///Удаляет клавиши, которые повышают позицию, из создаваемого объекта KeyBlock
+    public procedure RemoveIncreasers(params a: array of Key) := RemoveIncreasers(a as IEnumerable<Key>);
+    
+    ///Добавляет клавишу, которые понижают позицию, в создаваемый объект KeyBlock
+    public procedure AddDecreaser(a: Key);
+    begin
+      if not _Keys.Contains(a) then _Keys.Add(a);
+      _Decreasers.Add(a);
+    end;
+    
+    ///Добавляет клавиши, которые понижают позицию, в создаваемый объект KeyBlock
+    public procedure AddDecreasers(a: sequence of Key);
+    begin
+      foreach var x in a do
+      begin
+        if not _Keys.Contains(x) then _Keys.Add(x);
+        _Decreasers.Add(x);
+      end;
+    end;
+    
+    ///Добавляет клавиши, которые понижают позицию, в создаваемый объект KeyBlock
+    public procedure AddDecreasers(params a: array of Key) := AddDecreasers(a as IEnumerable<Key>);
+    
+    ///Удаляет клавиши, которые понижают позицию, из создаваемого объекта KeyBlock
+    public procedure RemoveDecreaser(a: Key);
+    begin
+      RemoveKey(a);
+      _Decreasers.Remove(a);
+    end;
+    
+    ///Удаляет клавиши, которые понижают позицию, из создаваемого объекта KeyBlock
+    public procedure RemoveDecreasers(a: sequence of Key) := foreach var x in a do RemoveDecreaser(x);
+    
+    ///Удаляет клавиши, которые понижают позицию, из создаваемого объекта KeyBlock
+    public procedure RemoveDecreasers(params a: array of Key) := RemoveDecreasers(a as IEnumerable<Key>);
+    
+    ///Возвращает готовый KeyBlock
+    public function ToKeyBlock: KeyBlock;
+    begin
+      Result := new KeyBlock;
+      Result._stdstage := _StdStage;
+      Result._stage := _Stages.ToArray;
+      Result._usekeys := _Keys.ToArray;
+      Result._decreasers := _Decreasers.ToArray;
+      Result._increasers := _Increasers.ToArray;
+      Result._stagecheckusing := _CheckStages;
+    end;
+  
+    public constructor;
+    begin
+      
+    end;
+  end;
+  
+  ///Представляет готовые строители классов KeyBlock
+  StandardKeyBlocksBuilders = static class
+    ///Представляет чистый строитель классов KeyBlock
+    ///Основа для тех случаев, когда Stage регулируются особым, отличным от внутреннего, образом
+    public static BuildCleanKeyBlock: KeyBlockBuilder;
+    
+    private static constructor;
+    begin
+      BuildCleanKeyBlock := new KeyBlockBuilder;
+      BuildCleanKeyBlock._CheckStages := false;
+      BuildCleanKeyBlock._StdStage := 0;
+      BuildCleanKeyBlock._Stages += new StageBlock(1, 1, 1);
+    end;
+  end;
+  
 {$region SizeSeparates Overloads}
 
 ///Возвращает последовательность строк, разделённых по заданной длине способом переноса t
