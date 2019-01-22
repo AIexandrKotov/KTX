@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 1; Build: 40);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 41);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -222,6 +222,7 @@ type
     
     private static function _WindowSizeIsActual := (System.Console.WindowHeight=_Height) and (System.Console.WindowWidth=_Width);
     
+    ///Возвращает true, если размер консоли соответствует размеру окна консоли
     public static property WindowSizeIsActual: boolean read _WindowSizeIsActual;
     
     ///Устанавливает положение курсора
@@ -598,6 +599,10 @@ type
     ///-
     private _decreasers: array of Key;
     ///-
+    private _exiters: array of Key;
+    ///-
+    private _confirmers: array of Key;
+    ///-
     private _stdstage: integer;
     ///-
     private _stagecheckusing: boolean;
@@ -617,11 +622,31 @@ type
     ///Возвращает или задаёт клавиши, которые понижают стандартную позицию
     public property Decreasers[ind: integer]: Key read _decreasers[ind] write _decreasers[ind] := value;
     
+    ///Возвращает или задаёт клавиши, которые закрывают данный KeyBlock
+    public property Exiters[ind: integer]: Key read _exiters[ind] write _exiters[ind] := value;
+    
+    ///Возвращает или задаёт клавиши, которые проводят действие
+    public property Confirmers[ind: integer]: Key read _confirmers[ind] write _confirmers[ind] := value;
+    
     ///Задаёт новые клавиши повышения позиции
     public procedure SetIncreasers(a: array of Key) := _increasers := a;
     
+    ///Задаёт новые клавиши выхода из блока
+    public procedure SetExiters(a: array of Key) := _exiters := a;
+    
+    ///Задаёт новые клавиши действия
+    public procedure SetConfirmers(a: array of Key) := _confirmers := a;
+    
     ///Задаёт новые клавиши понижения позиции
     public procedure SetDecreasers(a: array of Key) := _decreasers := a;
+    
+    private function _confirm: boolean;
+    begin
+      if _confirmers <> nil then Result := _confirmers.Contains(_input.Key);
+    end;
+    
+    ///Возвращает true, если нажата клавиша действия
+    public property Confirm: boolean read _confirm;
     
     ///Возвращает или задаёт стандартную позицию, которая будет использована повышателями и понижателями позиций
     public property StandardStage: integer read _stdstage write _stdstage := value;
@@ -655,6 +680,9 @@ type
           
         if _decreasers <> nil then
           if _decreasers.Contains(k.Key) then _stage[_stdstage]._current -= 1;
+          
+        if _exiters <> nil then
+          if _exiters.Contains(k.Key) then _status := false;
       end;
     end;
     
@@ -689,13 +717,15 @@ type
       _status := false;
     end;
     
-    ///Создаёт новый экземпляр класса KeyBlock
     private constructor;
     begin
       Console.After;
       if not Console.IsInit then Console.Init;
       _status := true;
     end;
+    
+    ///Создаёт новый экземпляр класса KeyBlock
+    public constructor(a: Func0<KeyBlock>);
     
     ///--
     public static function operator implicit(a: KeyBlock): boolean := a._status;
@@ -709,24 +739,27 @@ type
     private _Keys := new List<Key>;
     private _Increasers := new List<Key>;
     private _Decreasers := new List<Key>;
+    private _Confirmers := new List<Key>;
+    private _Exiters := new List<Key>;
     private _CheckStages: boolean;
     
-    private function _GetStages(ind: integer): StageBlock := _stages[ind];
-    private function _GetIncreasers(ind: integer): Key := _increasers[ind];
-    private function _GetDecreasers(ind: integer): Key := _decreasers[ind];
-    private function _GetKeys(ind: integer): Key := _Keys[ind];
-    
     ///Возвращает позиции создаваемого объекта KeyBlock
-    public property Stages[ind: integer]: StageBlock read _GetStages;
+    public property Stages[ind: integer]: StageBlock read _Stages[ind];
     
     ///Возвращает повышатели позиций создаваемого объекта KeyBlock
-    public property Increasers[ind: integer]: Key read _GetIncreasers;
+    public property Increasers[ind: integer]: Key read _Increasers[ind];
     
     ///Возвращает понижатели позиций создаваемого объекта KeyBlock
-    public property Decreasers[ind: integer]: Key read _GetDecreasers;
+    public property Decreasers[ind: integer]: Key read _Decreasers[ind];
+    
+    ///Возвращает клавиши действия создаваемого объекта KeyBlock
+    public property Confirmers[ind: integer]: Key read _Confirmers[ind];
+    
+    ///Возвращает клавиши выхода позиций создаваемого объекта KeyBlock
+    public property Exiters[ind: integer]: Key read _Exiters[ind];
     
     ///Возвращает все используемые клавиши создаваемого объекта KeyBlock
-    public property Keys[ind: integer]: Key read _GetKeys;
+    public property Keys[ind: integer]: Key read _Keys[ind];
     
     ///Возвращает или задаёт значение, которое показывает, будет ли вестись проверка позиций создаваемого объекта KeyBlock
     public property CheckStages: boolean read _CheckStages write _CheckStages := value;
@@ -833,6 +866,72 @@ type
     ///Удаляет клавиши, которые понижают позицию, из создаваемого объекта KeyBlock
     public procedure RemoveDecreasers(params a: array of Key) := RemoveDecreasers(a as IEnumerable<Key>);
     
+    ///Добавляет клавишу действия в создаваемый объект KeyBlock
+    public procedure AddConfirmer(a: Key);
+    begin
+      if not _Keys.Contains(a) then _Keys.Add(a);
+      _Confirmers.Add(a);
+    end;
+    
+    ///Добавляет клавиши действия в создаваемый объект KeyBlock
+    public procedure AddConfirmers(a: sequence of Key);
+    begin
+      foreach var x in a do
+      begin
+        if not _Keys.Contains(x) then _Keys.Add(x);
+        _Confirmers.Add(x);
+      end;
+    end;
+    
+    ///Добавляет клавиши действия в создаваемый объект KeyBlock
+    public procedure AddConfirmers(params a: array of Key) := AddConfirmers(a as IEnumerable<Key>);
+    
+    ///Удаляет клавиши действия из создаваемого объекта KeyBlock
+    public procedure RemoveConfirmer(a: Key);
+    begin
+      RemoveKey(a);
+      _Confirmers.Remove(a);
+    end;
+    
+    ///Удаляет клавиши действия из создаваемого объекта KeyBlock
+    public procedure RemoveConfirmers(a: sequence of Key) := foreach var x in a do RemoveConfirmer(x);
+    
+    ///Удаляет клавиши действия из создаваемого объекта KeyBlock
+    public procedure RemoveConfirmers(params a: array of Key) := RemoveConfirmers(a as IEnumerable<Key>);
+    
+    ///Добавляет клавишу выхода в создаваемый объект KeyBlock
+    public procedure AddExiter(a: Key);
+    begin
+      if not _Keys.Contains(a) then _Keys.Add(a);
+      _Exiters.Add(a);
+    end;
+    
+    ///Добавляет клавиши выхода в создаваемый объект KeyBlock
+    public procedure AddExiters(a: sequence of Key);
+    begin
+      foreach var x in a do
+      begin
+        if not _Keys.Contains(x) then _Keys.Add(x);
+        _Exiters.Add(x);
+      end;
+    end;
+    
+    ///Добавляет клавиши выхода в создаваемый объект KeyBlock
+    public procedure AddExiters(params a: array of Key) := AddExiters(a as IEnumerable<Key>);
+    
+    ///Удаляет клавиши выхода из создаваемого объекта KeyBlock
+    public procedure RemoveExiter(a: Key);
+    begin
+      RemoveKey(a);
+      _Exiters.Remove(a);
+    end;
+    
+    ///Удаляет клавиши выхода из создаваемого объекта KeyBlock
+    public procedure RemoveExiters(a: sequence of Key) := foreach var x in a do RemoveExiter(x);
+    
+    ///Удаляет клавиши выхода из создаваемого объекта KeyBlock
+    public procedure RemoveExiters(params a: array of Key) := RemoveExiters(a as IEnumerable<Key>);
+    
     ///Возвращает готовый KeyBlock
     public function ToKeyBlock: KeyBlock;
     begin
@@ -842,6 +941,8 @@ type
       Result._usekeys := _Keys.ToArray;
       Result._decreasers := _Decreasers.ToArray;
       Result._increasers := _Increasers.ToArray;
+      Result._confirmers := _Confirmers.ToArray;
+      Result._exiters := _Exiters.ToArray;
       Result._stagecheckusing := _CheckStages;
     end;
   
@@ -865,7 +966,21 @@ type
       BuildCleanKeyBlock._Stages += new StageBlock(1, 1, 1);
     end;
   end;
-  
+
+constructor KeyBlock.Create(a: Func0<KeyBlock>); 
+begin 
+  var k := a.Invoke; 
+  Self._usekeys := k._usekeys; 
+  Self._decreasers := k._decreasers;
+  Self._increasers := k._increasers;
+  Self._confirmers := k._confirmers;
+  Self._exiters := k._exiters;
+  Self._stage := k._stage; 
+  Self._stagecheckusing := k._stagecheckusing; 
+  Self._status := k._status; 
+  Self._stdstage := k._stdstage; 
+end;
+
 {$region SizeSeparates Overloads}
 
 ///Возвращает последовательность строк, разделённых по заданной длине способом переноса t
