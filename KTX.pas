@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 41);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 42);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -1461,6 +1461,12 @@ type
     begin
       Result := $'({PosX},{PosY},{Back},{Fore},{Symbol})';
     end;
+    
+    internal static function _Equality(left, right: DrawBox): boolean;
+    begin
+      Result := 
+        (left.PosX = right.PosX) and (left.PosY = right.PosY) and (left.Back = right.Back) and (left.Fore = right.Fore) and (left.Symbol = right.Symbol);
+    end;
   end;
   
   //Структура клетки для записи в файл или чтения из файла
@@ -1502,6 +1508,8 @@ type
     ///Массив клеток консоли
     public Draws: array of DrawBox;
     
+    internal constructor := exit;
+    
     ///Создаёт новый экземпляр клссса DrawBoxBlock
     public constructor (x, y: integer; b: Color; arr: array of DrawBox);
     begin
@@ -1511,7 +1519,7 @@ type
       Draws:=arr;
     end;
     
-    ///Создаёт новый экземпляр клссса DrawBoxBlock, загружая его из файла name
+    ///Создаёт новый экземпляр класса DrawBoxBlock, загружая его из файла name
     public constructor (name: string);
     begin
       var f: file;
@@ -1531,6 +1539,40 @@ type
         Draws[i]:=a3.ToDrawBox;
       end;
       f.Close;
+    end;
+    
+    ///Создаёт новый экземпляр класса DrawBoxBlock, вытаскивая его из ресурсного файла с именем name
+    public static function FromResourceStream(name: string): DrawBoxBlock;
+    begin
+      var br := new System.IO.BinaryReader(GetResourceStream(name));
+      var sx, sy: integer;
+      var a1: byte;
+      var a2: integer;
+      
+      sx := br.ReadInt32;
+      sy := br.ReadInt32;
+      a1 := br.ReadByte;
+      a2 := br.ReadInt32;
+      var a3 := new DrawBox[a2];
+      for var i:=0 to a3.Length-1 do
+      begin
+        var x, y: integer;
+        var c: char;
+        var b, f: byte;
+        x := br.ReadInt32;
+        y := br.ReadInt32;
+        c := br.ReadChar;
+        b := br.ReadByte;
+        f := br.ReadByte;
+        a3[i] := new DrawBox(x, y, c, ConvertColor.IntToColor(b), ConvertColor.IntToColor(f));
+      end;
+      Result := new DrawBoxBlock;
+      Result.Background := ConvertColor.IntToColor(a1);
+      Result.SizeX := sx;
+      Result.SizeY := sy;
+      Result.Draws := a3;
+      br.Close;
+      br.Dispose;
     end;
     
     ///Сохраняет текущий экземпляр класса DrawBoxBlock в файл name
@@ -1883,6 +1925,53 @@ procedure Draw(self: DrawBoxBlock; isoverlay: boolean); extensionmethod := Drawi
 ///Рисует текущий объект в консоли со всеми стандартными значениями
 procedure Draw(self: DrawBoxBlock); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
 
+type
+  ///Представляет методы для вывода последовательностей DrawBoxBlock'ов
+  Player = static class
+    //todo не работает
+    private static function GetSynchronizedDBBArray(a: array of DrawBoxBlock): array of DrawBoxBlock;
+    begin
+      var RealDBBs := new List<DrawBoxBlock>;
+      RealDBBs+=a[0];
+      for var i := 1 to a.Length-1 do
+      begin
+        if (a[i].SizeX <> RealDBBs.Last.SizeX) or (a[i].SizeY <> RealDBBs.Last.SizeY) then raise new System.Exception;
+        var kk := new List<DrawBox>;
+        for var j := 0 to a[i].Draws.Length - 1 do
+        begin
+          if (RealDBBs.Last.Draws.Length > j) then
+          begin
+            if not (DrawBox._Equality(a[i].Draws[j],RealDBBs.Last.Draws[j])) then kk.Add(a[i].Draws[j]);
+          end else kk.Add(a[i].Draws[j]);;
+        end;
+        RealDBBs += new DrawBoxBlock(a[i].SizeX, a[i].SizeY, a[i].Background, kk.ToArray);
+      end;
+      Result := RealDBBs.ToArray;
+    end;
+    ///Выводит на экран поселедовательность DrawBoxBlock'ов
+    public static procedure Play(params a: array of DrawBoxBlock);
+    begin
+      a.First.SetSize;
+      foreach var x in a do x.Draw();
+    end;
+    ///Выводит на экран поселедовательность синхронизированных последовательностей DrawBoxBlock'ов
+    ///После прохода по ячейке внешнего массива очищается экран
+    public static procedure Play(t: integer; k: DrawingType; params a: array of array of DrawBoxBlock);
+    begin
+      a.First.First.SetSize;
+      for var i := 0 to a.Length - 1 do
+      begin
+        var b := GetSynchronizedDBBArray(a[i]);
+        for var j := 0 to b.Length-1 do
+        begin
+          b[j].Draw(k, true);
+          sleep(t);
+        end;
+        Console.RealBack := a[i].First.Background;
+        Console.Clear;
+      end;
+    end;
+  end;
 {$endregion Drawing}
   
 begin
