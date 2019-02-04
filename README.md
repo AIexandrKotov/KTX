@@ -169,6 +169,8 @@ end.
 <code>Этот раздел разрабатывается</code>
 
 ## 5. Класс KTX.Drawing и его использование
+На что способен KTX.Drawing:<br/>
+![4](https://user-images.githubusercontent.com/44296606/52221089-7643fb80-28b1-11e9-9e5c-00935eead4d7.png)
 <code>Этот раздел разрабатывается</code>
 
 ## 6. Методы KTX.Console
