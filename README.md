@@ -123,6 +123,49 @@ end.
 ```
 
 ## 4. Блоки KTX.KeyBlock
+KeyBlock'и нужны для системы последовательного открывания блоков, как в KTX.Block, но с главным отличием — в качестве ввода используется не строки, введённые с клавиатуры, а сами клавиши клавиатуры.
+Простейший KeyBlock задаётся одной строкой:
+```pas
+  var a := new KTX.KeyBlock(() -> StandardKeyBlocksBuilders.BuildCleanKeyBlock.ToKeyBlock);
+```
+Что бы создать любой KeyBlock используются строители этого типа — KeyBlockBuilder'ы.<br/>
+Задаются они легко:<br/>
+```pas
+  var b := new KTX.KeyBlockBuilder;
+```
+Что бы выделить KeyBlock из строителя используется фукнция .ToKeyBlock <code>b.ToKeyBlock</code><br/>
+Но рекомендуется описывать строителя в лямбде конструктора KeyBlock'а.<br/>
+Как, например, в этом случае:<br/>
+```pas
+uses KTX;
+
+begin
+  var b := new KTX.KeyBlock(() ->
+  begin
+    var k := new KTX.KeyBlockBuilder;
+    k.AddStage(1,100,1);
+    k.StandardStage := 0;
+    k.CheckStages := true;
+    k.AddExiter(Key.Escape);
+    k.AddConfirmer(Key.Enter);
+    k.AddIncreasers(Key.DownArrow, Key.S);
+    k.AddDecreasers(Key.UpArrow, Key.W);
+    Result := k.ToKeyBlock;
+  end);
+  while b do
+  begin
+    b.Reload;
+    
+    Console.DrawOn(1,1,b.Stage[0]);
+    
+    b.Read;
+    
+    if b.Confirm then b.CurrentStage+=20;
+  end;
+end.
+```
+В этом примере стрелками вы сможете изменить значение числа (позиции) на 1, нажав Enter — увеличить на 20. Escape закроет текущий блок.<br/>
+Если вы хотите задать собственные зависимости клавиш внутри блока, можете просто выключить стандартную проверку позиций <code>k.CheckStages := false;</code>, а также не заполнять Exiters (клавиши выхода) и Confirmers.
 <code>Этот раздел разрабатывается</code>
 
 ## 5. Класс KTX.Drawing и его использование
