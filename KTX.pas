@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 42);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 45);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -488,18 +488,21 @@ type
     end;
     
     ///Ввод
-    public procedure Read();
+    public procedure Read(x, y: integer);
     begin
       Console.Pre;
       var s: string = '';
       while (s='') and (Console.WindowSizeIsActual) do
       begin
-        Console.SetCursorPosition(1,Console.Height-2);write(': ');
+        Console.SetCursorPosition(x,y);write(': ');
         readln(s);
       end;
       _input:=s;
       Console.After;
     end;
+    
+    ///Ввод
+    public procedure Read := Read(1, Console._height - 2);
     
     ///Ввод при изменении размера
     public procedure ReadWithResize(start, size: integer);
@@ -609,6 +612,9 @@ type
     
     ///Состояние блока
     public property Status: boolean read _status;
+    
+    ///Возвращает или задаёт значение стандартной позиции
+    public property CurrentStage: integer read _stage[_stdstage]._current write _stage[_stdstage]._current := value;
     
     ///Целочисленные позиции блока
     public property Stage[ind: integer]: integer read _stage[ind]._current write _stage[ind]._current := value;
@@ -954,17 +960,34 @@ type
   
   ///Представляет готовые строители классов KeyBlock
   StandardKeyBlocksBuilders = static class
+    private static function _BuildCleanKeyBlock: KeyBlockBuilder;
+    begin
+      Result := new KeyBlockBuilder;
+      Result._CheckStages := false;
+      Result._StdStage := 0;
+      Result._Stages += new StageBlock(1, 1, 1);
+    end;
+    
+    private static function _BuildKeyBlockWithExitConfirmErs: KeyBlockBuilder;
+    begin
+      Result := new KeyBlockBuilder;
+      Result._CheckStages := false;
+      Result._StdStage := 0;
+      Result._Stages += new StageBlock(1, 1, 1);
+      Result._Exiters += Key.Escape;
+      Result._Confirmers += Key.Enter;
+    end;
+    
     ///Представляет чистый строитель классов KeyBlock
     ///Основа для тех случаев, когда Stage регулируются особым, отличным от внутреннего, образом
-    public static BuildCleanKeyBlock: KeyBlockBuilder;
+    public static property BuildCleanKeyBlock: KeyBlockBuilder read _BuildCleanKeyBlock;
     
-    private static constructor;
-    begin
-      BuildCleanKeyBlock := new KeyBlockBuilder;
-      BuildCleanKeyBlock._CheckStages := false;
-      BuildCleanKeyBlock._StdStage := 0;
-      BuildCleanKeyBlock._Stages += new StageBlock(1, 1, 1);
-    end;
+    ///Представляет чистый строитель классов KeyBlock
+    ///От BuildCleanKeyBlock отличается тем, что при нажатии Escape блок закрывается, а при нажатии Enter происходит действие
+    public static property BuildKeyBlockWithExitConfirmErs: KeyBlockBuilder read _BuildKeyBlockWithExitConfirmErs;
+    
+    ///Возвращает полностью чистый строитель классов KeyBlock
+    public static property Zero: KeyBlockBuilder read (new KeyBlockBuilder);
   end;
 
 constructor KeyBlock.Create(a: Func0<KeyBlock>); 
@@ -1631,22 +1654,17 @@ type
     private static _DefaultIsOverlay := false;
     private static _DefaultDrawingType: DrawingType := DrawingType.Aline;
     
-    private static procedure SetRGBConveringType(a: RGBToColorConvertType) := _RGBConvertingType := a;
-    private static procedure SetDefaultAlignmentType(a: DrawingAlignmentType) := _DefaultAlignmentType := a;
-    private static procedure SetDefaultIsOverlay(a: boolean) := _DefaultIsOverlay := a;
-    private static procedure SetDefaultDrawingType(a: DrawingType) := _DefaultDrawingType := a;
-    
     ///Возвращает или задаёт стандартную конвертацию цвета
-    public static property RGBConvertingType: RGBToColorConvertType read _RGBConvertingType write SetRGBConveringType;
+    public static property RGBConvertingType: RGBToColorConvertType read _RGBConvertingType write _RGBConvertingType := value;
     
     ///Возвращает или задаёт стандартную отцентровку рисунка
-    public static property DefaultAlignmentType: DrawingAlignmentType read _DefaultAlignmentType write SetDefaultAlignmentType;
+    public static property DefaultAlignmentType: DrawingAlignmentType read _DefaultAlignmentType write _DefaultAlignmentType := value;
     
     ///Возвращает или задаёт стандартный параметр наложения
-    public static property DefaultIsOverlay: boolean read _DefaultIsOverlay write SetDefaultIsOverlay;
+    public static property DefaultIsOverlay: boolean read _DefaultIsOverlay write _DefaultIsOverlay := value;
     
     ///Возвращает или задаёт стандартный тип рисования
-    public static property DefaultDrawingType: DrawingType read _DefaultDrawingType write SetDefaultDrawingType;
+    public static property DefaultDrawingType: DrawingType read _DefaultDrawingType write _DefaultDrawingType := value;
     
     ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
     public static function ARGBPixelToDrawBox(x, y: integer; bg: Color; a, r, g, b: byte): DrawBox;
@@ -1933,18 +1951,14 @@ type
     begin
       var RealDBBs := new List<DrawBoxBlock>;
       RealDBBs+=a[0];
+      var Current := new List<DrawBox>;
       for var i := 1 to a.Length-1 do
       begin
-        if (a[i].SizeX <> RealDBBs.Last.SizeX) or (a[i].SizeY <> RealDBBs.Last.SizeY) then raise new System.Exception;
-        var kk := new List<DrawBox>;
-        for var j := 0 to a[i].Draws.Length - 1 do
-        begin
-          if (RealDBBs.Last.Draws.Length > j) then
-          begin
-            if not (DrawBox._Equality(a[i].Draws[j],RealDBBs.Last.Draws[j])) then kk.Add(a[i].Draws[j]);
-          end else kk.Add(a[i].Draws[j]);;
-        end;
-        RealDBBs += new DrawBoxBlock(a[i].SizeX, a[i].SizeY, a[i].Background, kk.ToArray);
+        foreach var x in RealDBBs do
+          foreach var y in x.Draws do Current+=y;
+        foreach var x in a[i].Draws do Current+=x;
+        RealDBBs+=new DrawBoxBlock(a[0].SizeX, a[0].SizeY, a[0].Background, Current.Distinct.ToArray);
+        Current.Clear;
       end;
       Result := RealDBBs.ToArray;
     end;
@@ -1959,15 +1973,21 @@ type
     public static procedure Play(t: integer; k: DrawingType; params a: array of array of DrawBoxBlock);
     begin
       a.First.First.SetSize;
+      var b: array of array of DrawBoxBlock;
+      SetLength(b,a.Length);
       for var i := 0 to a.Length - 1 do
       begin
-        var b := GetSynchronizedDBBArray(a[i]);
-        for var j := 0 to b.Length-1 do
+        b[i] := GetSynchronizedDBBArray(a[i]);
+      end;
+      
+      foreach var x in b do
+      begin
+        foreach var y in x do
         begin
-          b[j].Draw(k, true);
+          y.Draw(k, true);
           sleep(t);
         end;
-        Console.RealBack := a[i].First.Background;
+        Console.RealBack := x.First.Background;
         Console.Clear;
       end;
     end;
