@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 45);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 46);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -951,7 +951,9 @@ type
       Result._exiters := _Exiters.ToArray;
       Result._stagecheckusing := _CheckStages;
     end;
-  
+    
+    public static function operator implicit(a: KeyBlockBuilder): KeyBlock := a.ToKeyBlock;
+    
     public constructor;
     begin
       
