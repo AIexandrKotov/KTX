@@ -12,7 +12,7 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 47);
+  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 48);
 
 ///Возвращает строковое представление текущей версии модуля
 function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
@@ -334,11 +334,11 @@ type
       DrawLn(o);
     end;
     
-    /// Возвращает или задает позицию столбца курсора
-    public static property CursorLeft: integer read System.Console.CursorLeft;
+    ///Возвращает или задает позицию столбца курсора
+    public static property CursorLeft: integer read System.Console.CursorLeft write System.Console.CursorLeft := value;
     
-    /// Возвращает или задает позицию строки курсора
-    public static property CursorTop: integer read System.Console.CursorTop;
+    ///Возвращает или задает позицию строки курсора
+    public static property CursorTop: integer read System.Console.CursorTop write System.Console.CursorTop := value;
     
     private static constructor;
     begin
