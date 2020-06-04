@@ -5,6 +5,7 @@
 unit KTX;
 
 uses System.Drawing;
+uses System.Threading.Tasks;
 
 {$region Version}
 
@@ -12,10 +13,10 @@ const
   ///Название модуля
   Name = 'KTX Console Manager';
   ///Версия модуля
-  Version: record Major, Minor, Build: integer; end = (Major: 2; Minor: 2; Build: 48);
+  Version: record Major, Minor, SubMinor, Build: integer; end = (Major: 2; Minor: 3; SubMinor: 0; Build: 50);
 
 ///Возвращает строковое представление текущей версии модуля
-function StrVersion := $'{version.Major}.{version.Minor}.{version.Build}';
+function StrVersion := $'{version.Major}.{version.Minor}.{version.SubMinor}';
 
 ///Возвращает полное имя с версией
 function StrFull := $'{Name} {StrVersion}';
@@ -96,14 +97,8 @@ type
   Console = static class
     private const Err1: string = 'Window size too small';
     
-    ///Изменяет название окна консоли
-    public static procedure SetTitle(s: string);
-    begin
-      System.Console.Title:=s;
-    end;
-    
     ///Название консольного окна
-    public static property Title: string read System.Console.Title write SetTitle;
+    public static property Title: string read System.Console.Title write System.Console.Title := value;
     
     private static IsInit: boolean;
     
@@ -591,6 +586,21 @@ type
     public constructor(sbmin, sbmax: integer) := Create(sbmin, sbmax, 1);
   end;
   
+  KeyBlockAction = class
+    public Binds: array of Key;
+    public Action: System.Action;
+    public constructor(a: System.Action; params b: array of Key);
+    begin
+      Binds := b;
+      Action := a;
+    end;
+    public constructor(a: System.Action);
+    begin
+      Binds := nil;
+      Action := a;
+    end;
+  end;
+  
   KeyBlockBuilder = class;
   
   ///Представляет класс псевдоокна, который управляется клавишами
@@ -611,6 +621,8 @@ type
     private _exiters: array of Key;
     ///-
     private _confirmers: array of Key;
+    ///-
+    private _actioners: array of KeyBlockAction;
     ///-
     private _stdstage: integer;
     ///-
@@ -640,6 +652,9 @@ type
     ///Возвращает или задаёт клавиши, которые проводят действие
     public property Confirmers[ind: integer]: Key read _confirmers[ind] write _confirmers[ind] := value;
     
+    ///Возвращает или задаёт классы KeyBlockAction
+    public property Actioners[ind: integer]: KeyBlockAction read _actioners[ind] write _actioners[ind] := value;
+    
     ///Задаёт новые клавиши повышения позиции
     public procedure SetIncreasers(a: array of Key) := _increasers := a;
     
@@ -651,6 +666,9 @@ type
     
     ///Задаёт новые клавиши понижения позиции
     public procedure SetDecreasers(a: array of Key) := _decreasers := a;
+    
+    ///Задаёт новые KeyBlockAction'ы
+    public procedure SetActioners(a: array of KeyBlockAction) := _actioners := a;
     
     private function _confirm: boolean;
     begin
@@ -683,7 +701,16 @@ type
     public procedure Read(CheckReasers: boolean);
     begin
       var k := Console.ReadKey;
-      while (not _usekeys.Contains(k.Key)) and (Console.WindowSizeIsActual) do k := Console.ReadKey;
+      
+      while ((not _usekeys.Contains(k.Key)) or (_actioners.Any(x -> x.Binds <> nil ? x.Binds.Contains(k.Key) : true))) and (Console.WindowSizeIsActual) do
+      begin
+        if _actioners <> nil then
+          foreach var x in _actioners do
+            if x.Binds = nil then x.Action.Invoke else if x.Binds.Contains(k.Key) then x.Action.Invoke;
+        k := Console.ReadKey;
+      end;
+      
+      
       _input := k;
       if CheckReasers then
       begin
@@ -753,6 +780,7 @@ type
     private _Decreasers := new List<Key>;
     private _Confirmers := new List<Key>;
     private _Exiters := new List<Key>;
+    private _Actioners := new List<KeyBlockAction>;
     private _CheckStages: boolean;
     
     ///Возвращает позиции создаваемого объекта KeyBlock
@@ -787,6 +815,36 @@ type
     
     ///Добавляет клавиши в создаваемый объект KeyBlock
     public procedure AddKeys(params a: array of Key) := AddKeys(a as IEnumerable<Key>);
+    
+    ///Добавляет новый KeyBlockAction в создаваемый объект KeyBlock
+    public procedure AddAction(a: KeyBlockAction) := _Actioners.Add(a);
+    
+    ///Добавляет новый KeyBlockAction в создаваемый объект KeyBlock
+    public procedure AddAction(a: System.Action) := _Actioners.Add(new KeyBlockAction(a));
+    
+    ///Добавляет новые KeyBlockAction'ы в создаваемый объект KeyBlock
+    public procedure AddAction(a: sequence of KeyBlockAction) := _Actioners.AddRange(a);
+    
+    ///Добавляет новые KeyBlockAction'ы в создаваемый объект KeyBlock
+    public procedure AddAction(a: sequence of System.Action);
+    begin
+      foreach var x in a do _Actioners.Add(new KeyBlockAction(x));
+    end;
+    
+    ///Добавляет новые KeyBlockAction'ы в создаваемый объект KeyBlock
+    public procedure AddAction(params a: array of KeyBlockAction) := AddAction(a as IEnumerable<KeyBlockAction>);
+    
+    ///Добавляет новые KeyBlockAction'ы в создаваемый объект KeyBlock
+    public procedure AddAction(params a: array of System.Action) := AddAction(a as IEnumerable<System.Action>);
+    
+    ///Добавляет новый KeyBlockAction в создаваемый объект KeyBlock
+    public procedure RemoveAction(a: KeyBlockAction) := _Actioners.Remove(a);
+    
+    ///Добавляет новые KeyBlockAction'ы в создаваемый объект KeyBlock
+    public procedure RemoveAction(a: sequence of KeyBlockAction) := foreach var x in a do _Actioners.Remove(x);
+    
+    ///Добавляет новые KeyBlockAction'ы в создаваемый объект KeyBlock
+    public procedure RemoveAction(params a: array of KeyBlockAction) := AddAction(a as IEnumerable<KeyBlockAction>);
     
     ///Добавляет позицию в создаваемый объект KeyBlock
     public procedure AddStage(a: StageBlock) := _Stages.Add(a);
@@ -997,10 +1055,10 @@ type
     ///Возвращает полностью чистый строитель классов KeyBlock
     public static property Zero: KeyBlockBuilder read (new KeyBlockBuilder);
   end;
-
+  
 constructor KeyBlock.Create(a: Func0<KeyBlock>); 
 begin 
-  var k := a.Invoke; 
+  var k := a.Invoke;
   Self._usekeys := k._usekeys; 
   Self._decreasers := k._decreasers;
   Self._increasers := k._increasers;
@@ -1010,6 +1068,7 @@ begin
   Self._stagecheckusing := k._stagecheckusing; 
   Self._status := k._status; 
   Self._stdstage := k._stdstage; 
+  Self._actioners := k._actioners;
 end;
 
 {$region SizeSeparates Overloads}
@@ -1132,8 +1191,64 @@ type
     ///Экспериментальный тип конвертации
     Exp64,
     ///Экспериментальный тип конвертации
-    Exp128
+    Exp128,
+    ///Лучший тип конвертации по передаче цветов (идеальный для градиента). Очень долгая конвартация
+    Master
   );
+  
+  ///Представляет клетку консоли
+  DrawBox = class
+    ///Положение клетки по X (ширине)
+    public PosX: integer;
+    ///Положение клетки по Y (высоте)
+    public PosY: integer;
+    ///Цвет BackgroundColor клетки
+    public Back: Color;
+    ///Цвет ForegroundColor клетки
+    public Fore: Color;
+    ///Символ, находящийся в клетке
+    public Symbol: char;
+    
+    ///Создаёт новый экземпляр класса DrawBox
+    public constructor (x,y: integer; c: char; B, F: Color);
+    begin
+      PosX:=x;
+      PosY:=y;
+      Back:=B;
+      Fore:=F;
+      Symbol:=c;
+    end;
+    
+    //public static function Parse(s: string): DrawBox := new DrawBox(s);
+    
+    ///Возвращает строковое представление текущего экземпляра класса
+    public function ToString: string; override;
+    begin
+      Result := $'({PosX},{PosY},{Back},{Fore},{Symbol})';
+    end;
+    
+    internal static function _Equality(left, right: DrawBox): boolean;
+    begin
+      Result := 
+        (left.PosX = right.PosX) and (left.PosY = right.PosY) and (left.Back = right.Back) and (left.Fore = right.Fore) and (left.Symbol = right.Symbol);
+    end;
+  end;
+  
+  ColorBox = class
+    public R, G, B: integer;
+    public Back, Fore: Color;
+    public Symbol: char;
+    
+    public function ToDrawBox(x, y: integer): DrawBox;
+    begin
+      Result := new DrawBox();
+      Result.PosX := x;
+      Result.PosY := y;
+      Result.Back := Back;
+      Result.Fore := Fore;
+      Result.Symbol := Symbol;
+    end;
+  end;
   
   ///Класс, содержащий значения цветов консоли в виде RGB
   RGBConsole = static class
@@ -1309,6 +1424,7 @@ type
       case a of
         v20: Result := OldRGBToColor(r, g, b);
         &New, Exp64, Exp128: Result := FromRGB(r, g, b);
+        Master: Result := FromRGB(r, g, b);
         else raise new System.Exception;
       end;
     end;
@@ -1460,45 +1576,104 @@ type
         RGBToColorConvertType.Exp128: Result := (Experimental128(a, r, g, b));
       end;
     end;
+    
+    public static MasterContext: Dictionary<char, single> := new Dictionary<char, single>();
+    public static AllColors: array of ColorBox;
+    
+    public static function GetARGB(c: Color): System.ValueTuple<byte, byte, byte>;
+    begin
+      case c of
+        Color.Black: Result := new System.ValueTuple<byte, byte, byte>(0,0,0);
+        Color.DarkGray: Result := new System.ValueTuple<byte, byte, byte>(128,128,128);
+        Color.Gray: Result := new System.ValueTuple<byte, byte, byte>(192,192,192);
+        Color.White: Result := new System.ValueTuple<byte, byte, byte>(255,255,255);
+        Color.DarkBlue: Result := new System.ValueTuple<byte, byte, byte>(0,0,128);
+        Color.DarkGreen: Result := new System.ValueTuple<byte, byte, byte>(0,128,0);
+        Color.DarkRed: Result := new System.ValueTuple<byte, byte, byte>(128,0,0);
+        Color.DarkCyan: Result := new System.ValueTuple<byte, byte, byte>(0,128,128);
+        Color.DarkYellow: Result := new System.ValueTuple<byte, byte, byte>(128,128,0);
+        Color.DarkMagenta: Result := new System.ValueTuple<byte, byte, byte>(128,0,128);
+        Color.Blue: Result := new System.ValueTuple<byte, byte, byte>(0,0,255);
+        Color.Green: Result := new System.ValueTuple<byte, byte, byte>(0,255,0);
+        Color.Red: Result := new System.ValueTuple<byte, byte, byte>(255,0,0);
+        Color.Cyan: Result := new System.ValueTuple<byte, byte, byte>(0,255,255);
+        Color.Yellow: Result := new System.ValueTuple<byte, byte, byte>(255,255,0);
+        Color.Magenta: Result := new System.ValueTuple<byte, byte, byte>(255,0,255);
+      end;
+    end;
+    
+    public static function Mix(a, b: Color; mixing: real): System.ValueTuple<byte, byte, byte>;
+    begin
+      var left := GetARGB(a);
+      var right := GetARGB(b);
+      Result := new System.ValueTuple<byte, byte, byte>(
+        Round(left.Item1 + (right.Item1-left.Item1)*mixing),
+        Round(left.Item2 + (right.Item2-left.Item2)*mixing),
+        Round(left.Item3 + (right.Item3-left.Item3)*mixing)
+      );
+    end;
+    
+    static constructor;
+    begin
+      MasterContext.Add(' ', 0);
+      MasterContext.Add('.', 0.06);
+      MasterContext.Add(':', 0.13);
+      MasterContext.Add(';', 0.19);
+      MasterContext.Add('░', 0.26);
+      MasterContext.Add('t', 0.32);
+      MasterContext.Add('S', 0.39);
+      MasterContext.Add('0', 0.45);
+      MasterContext.Add('X', 0.52);
+      MasterContext.Add('8', 0.58);
+      MasterContext.Add('▒', 0.65);
+      MasterContext.Add('#', 0.71);
+      MasterContext.Add('&', 0.78);
+      MasterContext.Add('%', 0.84);
+      MasterContext.Add('@', 0.93);
+      MasterContext.Add('▓', 1);
+      
+      AllColors := new ColorBox[(16*16)*MasterContext.Count];
+      var cnt := 0;
+      for var i := 0 to 15 do
+      begin
+        for var j := 0 to 15 do
+        begin
+          //if (i = j) then continue;
+          foreach var x in MasterContext do
+          begin
+            var current := new ColorBox();
+            current.Back := Color(j);
+            current.Fore := Color(i);
+            current.Symbol := x.Key;
+            var mx := Mix(current.Back, current.Fore, x.Value);
+            current.R := mx.Item1;
+            current.G := mx.Item2;
+            current.B := mx.Item3;
+            AllColors[cnt] := current;
+            cnt += 1;
+          end;
+        end;
+      end;
+    end;
+    
+    public static function Find(r, g, b: byte): ColorBox;
+    begin
+      var absi: integer;
+      var abssum: real;
+      abssum := sqrt((AllColors[0].R - r)**2 + (AllColors[0].G - g)**2 + (AllColors[0].B - b)**2);
+      for var i := 1 to AllColors.Length - 1 do
+      begin
+        var currentabssum := sqrt((AllColors[i].R - r)**2 + (AllColors[i].G - g)**2 + (AllColors[i].B - b)**2);
+        if (currentabssum < abssum) then
+        begin
+          absi := i;
+          abssum := currentabssum;
+        end;
+      end;
+      Result := AllColors[absi];
+    end;
   end;
   
-  ///Представляет клетку консоли
-  DrawBox = class
-    ///Положение клетки по X (ширине)
-    public PosX: integer;
-    ///Положение клетки по Y (высоте)
-    public PosY: integer;
-    ///Цвет BackgroundColor клетки
-    public Back: Color;
-    ///Цвет ForegroundColor клетки
-    public Fore: Color;
-    ///Символ, находящийся в клетке
-    public Symbol: char;
-    
-    ///Создаёт новый экземпляр класса DrawBox
-    public constructor (x,y: integer; c: char; B, F: Color);
-    begin
-      PosX:=x;
-      PosY:=y;
-      Back:=B;
-      Fore:=F;
-      Symbol:=c;
-    end;
-    
-    //public static function Parse(s: string): DrawBox := new DrawBox(s);
-    
-    ///Возвращает строковое представление текущего экземпляра класса
-    public function ToString: string; override;
-    begin
-      Result := $'({PosX},{PosY},{Back},{Fore},{Symbol})';
-    end;
-    
-    internal static function _Equality(left, right: DrawBox): boolean;
-    begin
-      Result := 
-        (left.PosX = right.PosX) and (left.PosY = right.PosY) and (left.Back = right.Back) and (left.Fore = right.Fore) and (left.Symbol = right.Symbol);
-    end;
-  end;
   
   //Структура клетки для записи в файл или чтения из файла
   ///--
@@ -1657,7 +1832,8 @@ type
   Drawing = static class
     ///Символы вывода
     public const Context = ' .:;t08SX%&#@░▒▓';
-    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.New;
+    
+    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.Master;
     private static _DefaultAlignmentType: DrawingAlignmentType := DrawingAlignmentType.Center;
     private static _DefaultIsOverlay := false;
     private static _DefaultDrawingType: DrawingType := DrawingType.Aline;
@@ -1677,21 +1853,28 @@ type
     ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
     public static function ARGBPixelToDrawBox(x, y: integer; bg: Color; a, r, g, b: byte): DrawBox;
     begin
-      Result := new DrawBox();
+      if (RGBConvertingType <> RGBToColorConvertType.Master) then
+      begin
+        Result := new DrawBox();
+        Result.PosX := x;
+        Result.PosY := y;
+        Result.Symbol:=' ';
+        Result.Back:=RGBConsole.RGBToColor(_RGBConvertingType,r,g,b);
+        
+        var RR, GG, BB: integer;
+        
+        (RR, GG, BB) := RGBConsole.RGBToSubColor(_RGBConvertingType, Result.Back, r, g, b);
+        
+        Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
+        Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
+      end
+      else
+      begin
+        var fnd := RGBConsole.Find(r, g, b);
+        Result := fnd.ToDrawBox(x, y);
+        if RGBConsole.ColorEquality(bg,r,g,b) then Result.Symbol := 'T';
+      end;
       
-      Result.PosX := x;
-      Result.PosY := y;
-      Result.Symbol:=' ';
-      Result.Back:=RGBConsole.RGBToColor(_RGBConvertingType,r,g,b);
-      
-      var RR, GG, BB: integer;
-      
-      (RR, GG, BB) := RGBConsole.RGBToSubColor(_RGBConvertingType,Result.Back, r, g, b);
-      
-      Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
-      Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
-      
-      if RGBConsole.ColorEquality(bg,r,g,b) then Result.Symbol := 'T';
     end;
     
     ///Преобразует файл-рисунок в экземпляр класса DrawBoxBlock
@@ -1704,6 +1887,7 @@ type
       Result.SizeY := b.Height;
       
       var Draws := new List<DrawBox>;
+      var locker := new object;
       var Colors := new List<System.Drawing.Color>;
       
       for var i:=0 to (b.Width)*(b.Height) - 2 do
@@ -1714,19 +1898,35 @@ type
       end;
       
       var bgrnd0 := System.Drawing.Color.FromArgb(Colors.GroupBy(x -> x.ToArgb).MaxBy(x -> x.Count).Key);
-      var bgrnd := RGBConsole.RGBToColor(_RGBConvertingType, bgrnd0.A, bgrnd0.G, bgrnd0.B);
+      var bgrnd := RGBConsole.RGBToColor(_RGBConvertingType, bgrnd0.R, bgrnd0.G, bgrnd0.B);
       Result.Background := bgrnd;
-      
-      for var i:=0 to (b.Width)*(b.Height) - 2 do
+      Parallel.For(0, (b.Width)*(b.Height) - 1, i ->
       begin
-        var xx := i mod b.Width;
-        var yy := i div b.Width;
-        var cc := b.GetPixel(xx,yy);
+        var xx, yy: integer;
+        var cc: System.Drawing.Color;
+        lock b do
+        begin
+          xx := i mod b.Width;
+          yy := i div b.Width;
+          cc := b.GetPixel(xx,yy);
+        end;
         
-        Draws+=ARGBPixelToDrawBox(xx,yy, bgrnd, cc.A, cc.R, cc.G, cc.B);
-      end;
+        var dbx := ARGBPixelToDrawBox(xx,yy, bgrnd, cc.A, cc.R, cc.G, cc.B);
+        if (dbx = nil) or (dbx.Symbol = 'T') then exit;
+        lock locker do Draws.Add(dbx);
+      end);
+//      for var i:=0 to (b.Width)*(b.Height) - 2 do
+//      begin
+//        var xx := i mod b.Width;
+//        var yy := i div b.Width;
+//        var cc := b.GetPixel(xx,yy);
+//        
+//        var dbx := ARGBPixelToDrawBox(xx,yy, bgrnd, cc.A, cc.R, cc.G, cc.B);
+//        if (dbx = nil) or (dbx.Symbol = 'T') then continue;
+//        lock locker do Draws.Add(dbx);
+//      end;
       
-      Draws.RemoveAll(x -> (x = nil) or (x.Symbol = 'T'));
+      var lst := Draws.ToList.RemoveAll(x -> (x = nil) or (x.Symbol = 'T'));
       Result.Draws := Draws.ToArray;
       
       b.Dispose;
