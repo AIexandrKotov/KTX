@@ -1890,19 +1890,19 @@ type
     ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
     public static function ARGBPixelToDrawBox(converttype: RGBToColorConvertType; x, y: integer; bga: boolean; bg: Color; a, r, g, b: byte): DrawBox;
     begin
-      if (RGBConvertingType < RGBToColorConvertType.Master) then
+      if (converttype < RGBToColorConvertType.Master) then
       begin
         Result := new DrawBox();
         Result.PosX := x;
         Result.PosY := y;
         Result.Symbol:=' ';
-        Result.Back:=RGBConsole.RGBToColor(_RGBConvertingType,r,g,b);
+        Result.Back:=RGBConsole.RGBToColor(converttype,r,g,b);
         
         var RR, GG, BB: integer;
         
-        (RR, GG, BB) := RGBConsole.RGBToSubColor(_RGBConvertingType, Result.Back, r, g, b);
+        (RR, GG, BB) := RGBConsole.RGBToSubColor(converttype, Result.Back, r, g, b);
         
-        Result.Fore := RGBConsole.RGBToColor(_RGBConvertingType, RR*16, GG*16, BB*16);
+        Result.Fore := RGBConsole.RGBToColor(converttype, RR*16, GG*16, BB*16);
         Result.Symbol := Context[Arr(RR, GG, BB).Average.Round];
       end
       else
