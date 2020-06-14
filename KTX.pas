@@ -237,6 +237,13 @@ type
       System.Console.SetWindowSize(x, y);
     end;
     
+    public static procedure SetSize(x, y: integer);
+    begin
+      SetWindowSize(x, y);
+      SetBufferSize(x, y);
+      Resize();
+    end;
+    
     ///Задаёт размер буфера консоли
     public static procedure SetBufferSize(x, y: integer) := System.Console.SetBufferSize(x, y);
     
@@ -1183,17 +1190,18 @@ type
   
   ///Тип конвертации RGB в ConsoleColor
   RGBToColorConvertType = (
-    ///Тип конвертации версии 2.0.2
-    ///Больше подходит для чёрно-белых фотографий
+    ///--
     v20,
-    ///Новый тип конвертации
+    ///--
     &New,
-    ///Экспериментальный тип конвертации
+    ///--
     Exp64,
-    ///Экспериментальный тип конвертации
+    ///--
     Exp128,
     ///Лучший тип конвертации по передаче цветов (идеальный для градиента). Очень долгая конвартация
-    Master
+    Master,
+    ///Эстетически лучший тип конвертации. Имеет в 4 раза меньше цветов по сравнению со всеми остальными
+    Esthetic1024
   );
   
   ///Представляет клетку консоли
@@ -1424,7 +1432,7 @@ type
       case a of
         v20: Result := OldRGBToColor(r, g, b);
         &New, Exp64, Exp128: Result := FromRGB(r, g, b);
-        Master: Result := FromRGB(r, g, b);
+        Master, Esthetic1024: Result := FromRGB(r, g, b);
         else raise new System.Exception;
       end;
     end;
@@ -1577,8 +1585,8 @@ type
       end;
     end;
     
-    public static MasterContext: Dictionary<char, single> := new Dictionary<char, single>();
-    public static AllColors: array of ColorBox;
+    public static MasterColors: array of ColorBox;
+    public static Esthetic1024Colors: array of ColorBox;
     
     public static function GetARGB(c: Color): System.ValueTuple<byte, byte, byte>;
     begin
@@ -1613,8 +1621,35 @@ type
       );
     end;
     
+    public static function FillColors(context: Dictionary<char, single>): array of ColorBox;
+    begin
+      Result := new ColorBox[(16*16)*context.Count];
+      var cnt := 0;
+      for var i := 0 to 15 do
+      begin
+        for var j := 0 to 15 do
+        begin
+          //if (i = j) then continue;
+          foreach var x in context do
+          begin
+            var current := new ColorBox();
+            current.Back := Color(j);
+            current.Fore := Color(i);
+            current.Symbol := x.Key;
+            var mx := Mix(current.Back, current.Fore, x.Value);
+            current.R := mx.Item1;
+            current.G := mx.Item2;
+            current.B := mx.Item3;
+            Result[cnt] := current;
+            cnt += 1;
+          end;
+        end;
+      end;
+    end;
+    
     static constructor;
     begin
+      var MasterContext: Dictionary<char, single> := new Dictionary<char, single>();
       MasterContext.Add(' ', 0);
       MasterContext.Add('.', 0.06);
       MasterContext.Add(':', 0.13);
@@ -1631,46 +1666,38 @@ type
       MasterContext.Add('%', 0.84);
       MasterContext.Add('@', 0.93);
       MasterContext.Add('▓', 1);
+      MasterColors := FillColors(MasterContext);
       
-      AllColors := new ColorBox[(16*16)*MasterContext.Count];
-      var cnt := 0;
-      for var i := 0 to 15 do
-      begin
-        for var j := 0 to 15 do
-        begin
-          //if (i = j) then continue;
-          foreach var x in MasterContext do
-          begin
-            var current := new ColorBox();
-            current.Back := Color(j);
-            current.Fore := Color(i);
-            current.Symbol := x.Key;
-            var mx := Mix(current.Back, current.Fore, x.Value);
-            current.R := mx.Item1;
-            current.G := mx.Item2;
-            current.B := mx.Item3;
-            AllColors[cnt] := current;
-            cnt += 1;
-          end;
-        end;
-      end;
+      var EstheticContext: Dictionary<char, single> := new Dictionary<char, single>();
+      EstheticContext.Add(' ', 0);
+      EstheticContext.Add('░', 0.25);
+      EstheticContext.Add('▒', 0.5);
+      EstheticContext.Add('▓', 0.75);
+      Esthetic1024Colors := FillColors(EstheticContext);
     end;
     
-    public static function Find(r, g, b: byte): ColorBox;
+    public static function Find(colors: array of ColorBox; r, g, b: byte): ColorBox;
     begin
       var absi: integer;
-      var abssum: real;
-      abssum := sqrt((AllColors[0].R - r)**2 + (AllColors[0].G - g)**2 + (AllColors[0].B - b)**2);
-      for var i := 1 to AllColors.Length - 1 do
+      var abssum := (colors[0].R - r)**2 + (colors[0].G - g)**2 + (colors[0].B - b)**2;
+      for var i := 1 to colors.Length - 1 do
       begin
-        var currentabssum := sqrt((AllColors[i].R - r)**2 + (AllColors[i].G - g)**2 + (AllColors[i].B - b)**2);
+        var currentabssum := (colors[i].R - r)**2 + (colors[i].G - g)**2 + (colors[i].B - b)**2;
         if (currentabssum < abssum) then
         begin
           absi := i;
           abssum := currentabssum;
         end;
       end;
-      Result := AllColors[absi];
+      Result := colors[absi];
+    end;
+    
+    public static function Find(converttype: RGBToColorConvertType; r, g, b: byte): ColorBox;
+    begin
+      case converttype of
+        RGBToColorConvertType.Master: Result := Find(MasterColors, r, g, b);
+        RGBToColorConvertType.Esthetic1024: Result := Find(Esthetic1024Colors, r, g, b);
+      end;
     end;
   end;
   
@@ -1711,6 +1738,8 @@ type
     public SizeY: integer;
     ///Основной цвет окна
     public Background: Color;
+    ///Возвращает наличие бэкграунда у блока
+    public BackgroundAvailable: boolean;
     ///Массив клеток консоли
     public Draws: array of DrawBox;
     
@@ -1722,6 +1751,7 @@ type
       SizeX:=x;
       SizeY:=y;
       Background:=b;
+      BackgroundAvailable := true;
       Draws:=arr;
     end;
     
@@ -1735,6 +1765,7 @@ type
       var a1: byte;
       var a2: integer;
       Read(f,a1);
+      Read(f, BackgroundAvailable);
       Read(f,a2);
       Background:=ConvertColor.IntToColor(a1);
       Draws:=new DrawBox[a2];
@@ -1754,10 +1785,12 @@ type
       var sx, sy: integer;
       var a1: byte;
       var a2: integer;
+      var bav := false;
       
       sx := br.ReadInt32;
       sy := br.ReadInt32;
       a1 := br.ReadByte;
+      bav := br.ReadBoolean;
       a2 := br.ReadInt32;
       var a3 := new DrawBox[a2];
       for var i:=0 to a3.Length-1 do
@@ -1789,6 +1822,7 @@ type
       f.Write(SizeX);
       f.Write(SizeY);
       f.Write(ConvertColor.ColorToInt(Background));
+      f.Write(BackgroundAvailable);
       f.Write(Draws.Length);
       for var i:=0 to Draws.Length-1 do
       begin
@@ -1833,10 +1867,13 @@ type
     ///Символы вывода
     public const Context = ' .:;t08SX%&#@░▒▓';
     
-    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.Master;
+    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.Esthetic1024;
     private static _DefaultAlignmentType: DrawingAlignmentType := DrawingAlignmentType.Center;
     private static _DefaultIsOverlay := false;
     private static _DefaultDrawingType: DrawingType := DrawingType.Aline;
+    
+    ///Возвращает или задаёт значение, определяющее будет ли проводиться многопоточная конвертация картинки. Конвертация в 3 раза быстрее, вывод в 2-3 раза медленнее
+    public static auto property MulthThreadConvert: boolean := false;
     
     ///Возвращает или задаёт стандартную конвертацию цвета
     public static property RGBConvertingType: RGBToColorConvertType read _RGBConvertingType write _RGBConvertingType := value;
@@ -1851,9 +1888,9 @@ type
     public static property DefaultDrawingType: DrawingType read _DefaultDrawingType write _DefaultDrawingType := value;
     
     ///Преобразует ARGB (4 байтовое) представление цвета в DrawBox
-    public static function ARGBPixelToDrawBox(x, y: integer; bg: Color; a, r, g, b: byte): DrawBox;
+    public static function ARGBPixelToDrawBox(converttype: RGBToColorConvertType; x, y: integer; bga: boolean; bg: Color; a, r, g, b: byte): DrawBox;
     begin
-      if (RGBConvertingType <> RGBToColorConvertType.Master) then
+      if (RGBConvertingType < RGBToColorConvertType.Master) then
       begin
         Result := new DrawBox();
         Result.PosX := x;
@@ -1870,15 +1907,15 @@ type
       end
       else
       begin
-        var fnd := RGBConsole.Find(r, g, b);
+        var fnd := RGBConsole.Find(converttype, r, g, b);
         Result := fnd.ToDrawBox(x, y);
-        if RGBConsole.ColorEquality(bg,r,g,b) then Result.Symbol := 'T';
+        if (bga) and RGBConsole.ColorEquality(bg,r,g,b) then Result.Symbol := 'T';
       end;
       
     end;
     
-    ///Преобразует файл-рисунок в экземпляр класса DrawBoxBlock
-    public static function BitMapToDrawBoxBlock(bmpname: string): DrawBoxBlock;
+    ///Преобразует файл-рисунок в экземпляр класса DrawBoxBlock используя переданный тип конвертации
+    public static function BitMapToDrawBoxBlock(converttype: RGBToColorConvertType; bmpname: string): DrawBoxBlock;
     begin
       var b := new Bitmap(bmpname);
       
@@ -1897,40 +1934,60 @@ type
         Colors += b.GetPixel(xx,yy);
       end;
       
-      var bgrnd0 := System.Drawing.Color.FromArgb(Colors.GroupBy(x -> x.ToArgb).MaxBy(x -> x.Count).Key);
-      var bgrnd := RGBConsole.RGBToColor(_RGBConvertingType, bgrnd0.R, bgrnd0.G, bgrnd0.B);
-      Result.Background := bgrnd;
-      Parallel.For(0, (b.Width)*(b.Height) - 1, i ->
+      if (Colors.Any(x -> x.A = 0)) then
       begin
-        var xx, yy: integer;
-        var cc: System.Drawing.Color;
-        lock b do
+        Result.BackgroundAvailable := false;
+      end
+      else
+      begin
+        var bgrnd0 := System.Drawing.Color.FromArgb(Colors.GroupBy(x -> x.ToArgb).MaxBy(x -> x.Count).Key);
+        Result.Background := RGBConsole.RGBToColor(converttype, bgrnd0.R, bgrnd0.G, bgrnd0.B);
+        Result.BackgroundAvailable := true;
+      end;
+      
+      var bgrnd := Result.Background; //issue #2136
+      var bga := Result.BackgroundAvailable; //issue #2136
+      
+      if (MulthThreadConvert) then
+      begin
+        Parallel.For(0, (b.Width)*(b.Height) - 1, i ->
         begin
-          xx := i mod b.Width;
-          yy := i div b.Width;
-          cc := b.GetPixel(xx,yy);
+          var xx, yy: integer;
+          var cc: System.Drawing.Color;
+          lock b do
+          begin
+            xx := i mod b.Width;
+            yy := i div b.Width;
+            cc := b.GetPixel(xx,yy);
+          end;
+          if (cc.A = 0) then exit;
+          var dbx := ARGBPixelToDrawBox(converttype, xx,yy, bga, bgrnd, cc.A, cc.R, cc.G, cc.B);
+          if (dbx = nil) or (dbx.Symbol = 'T') then exit;
+          lock locker do Draws.Add(dbx);
+        end);
+      end
+      else
+      begin
+        for var i:=0 to (b.Width)*(b.Height) - 2 do
+        begin
+          var xx := i mod b.Width;
+          var yy := i div b.Width;
+          var cc := b.GetPixel(xx,yy);
+          if (cc.A = 0) then continue;
+          var dbx := ARGBPixelToDrawBox(converttype, xx,yy, bga, bgrnd, cc.A, cc.R, cc.G, cc.B);
+          if (dbx = nil) or (dbx.Symbol = 'T') then continue;
+          lock locker do Draws.Add(dbx);
         end;
-        
-        var dbx := ARGBPixelToDrawBox(xx,yy, bgrnd, cc.A, cc.R, cc.G, cc.B);
-        if (dbx = nil) or (dbx.Symbol = 'T') then exit;
-        lock locker do Draws.Add(dbx);
-      end);
-//      for var i:=0 to (b.Width)*(b.Height) - 2 do
-//      begin
-//        var xx := i mod b.Width;
-//        var yy := i div b.Width;
-//        var cc := b.GetPixel(xx,yy);
-//        
-//        var dbx := ARGBPixelToDrawBox(xx,yy, bgrnd, cc.A, cc.R, cc.G, cc.B);
-//        if (dbx = nil) or (dbx.Symbol = 'T') then continue;
-//        lock locker do Draws.Add(dbx);
-//      end;
+      end;
       
       var lst := Draws.ToList.RemoveAll(x -> (x = nil) or (x.Symbol = 'T'));
       Result.Draws := Draws.ToArray;
       
       b.Dispose;
     end;
+    
+    ///Преобразует файл-рисунок в экземпляр класса DrawBoxBlock
+    public static function BitMapToDrawBoxBlock(bmpname: string): DrawBoxBlock := BitMapToDrawBoxBlock(_RGBConvertingType, bmpname);
     
     ///Преобразует файл-рисунок bmpname в файл .ktx
     public static procedure BitMapToKTXFile(bmpname, ktxname: string);
@@ -1943,16 +2000,16 @@ type
     begin
       case AlignementType of
         LeftUp: Result := (0,0);
-        Up: Result := ((Console.Width - a.SizeX) div 2, 0);
-        RightUp: Result := ((Console.Width - a.SizeX), 0);
+        Up: Result := ((System.Console.BufferWidth - a.SizeX) div 2, 0);
+        RightUp: Result := ((System.Console.BufferWidth - a.SizeX), 0);
         
-        Left: Result := (0, (Console.Height - a.SizeY) div 2);
-        Center: Result := ((Console.Width - a.SizeX) div 2,(Console.Height -  a.SizeY) div 2);
-        Right: Result := ((Console.Width - a.SizeX), (Console.Height - a.SizeY) div 2);
+        Left: Result := (0, (System.Console.BufferHeight - a.SizeY) div 2);
+        Center: Result := ((System.Console.BufferWidth - a.SizeX) div 2,(System.Console.BufferHeight -  a.SizeY) div 2);
+        Right: Result := ((System.Console.BufferWidth - a.SizeX), (System.Console.BufferHeight - a.SizeY) div 2);
         
-        LeftDown: Result := (0, (Console.Height - a.SizeY));
-        Down: Result := ((Console.Width - a.SizeX) div 2, (Console.Height - a.SizeY));
-        RightDown: Result := ((Console.Width - a.SizeX), (Console.Height - a.SizeY));
+        LeftDown: Result := (0, (System.Console.BufferHeight - a.SizeY));
+        Down: Result := ((System.Console.BufferWidth - a.SizeX) div 2, (System.Console.BufferHeight - a.SizeY));
+        RightDown: Result := ((System.Console.BufferWidth - a.SizeX), (System.Console.BufferHeight - a.SizeY));
       end;
     end;
     
@@ -1962,13 +2019,23 @@ type
     ///Построчное рисование a от позиции (x, y) и параметром наложения isoverlay
     public static procedure AlineDraw(a: DrawBoxBlock; x, y: integer; isoverlay: boolean);
     begin
-      System.Console.BackgroundColor:=a.Background;
+      System.Console.BackgroundColor := a.BackgroundAvailable ? a.Background : Color.White;
       if not isoverlay then Console.Clear;
+      var lastwdh := 0;
+      var lasthgt := 0;
+      var lastbck := Color.White;
+      var lastfore := Color.Black;
       for var i:=0 to a.Draws.Length-1 do
       begin
-        Console.SetCursorPosition(a.Draws[i].PosX+x,a.Draws[i].PosY+y);
-        System.Console.BackgroundColor:=a.Draws[i].Back;
-        System.Console.ForegroundColor:=a.Draws[i].Fore;
+        var currentwidth := a.Draws[i].PosX+x;
+        var currentheight := a.Draws[i].PosY+y;
+        if ((lastwdh + 1 <> currentwidth) or (lasthgt <> currentheight)) then Console.SetCursorPosition(currentwidth, currentheight);
+        lastwdh := currentwidth;
+        lasthgt := currentheight;
+        if (lastbck <> a.Draws[i].Back) then System.Console.BackgroundColor:=a.Draws[i].Back;
+        if (lastfore <> a.Draws[i].Fore) then System.Console.ForegroundColor:=a.Draws[i].Fore;
+        lastbck := a.Draws[i].Back;
+        lastfore := a.Draws[i].Fore;
         write(a.Draws[i].Symbol);
       end;
     end;
@@ -1997,7 +2064,7 @@ type
     ///Поцветовое рисование a от позиции (x, y) и параметром наложения isoverlay
     public static procedure HexDraw(a: DrawBoxBlock; x, y: integer; isoverlay: boolean);
     begin
-      System.Console.BackgroundColor:=a.Background;
+      System.Console.BackgroundColor := a.BackgroundAvailable ? a.Background : Color.White;
       if not isoverlay then Console.Clear;
       var aa: array[1..16] of array of DrawBox;
       for var i:=1 to 16 do
@@ -2099,9 +2166,16 @@ type
 function SetSize(self: DrawBoxBlock): DrawBoxBlock; extensionmethod;
 begin
   Result := self;
-  Console.SetWindowSize(self.SizeX,self.SizeY);
-  Console.SetBufferSize(self.SizeX,self.SizeY);
+  if (self.SizeX > Console.MaxWidth) or (self.SizeY > Console.MaxHeight) then
+  begin
+    Console.SetWindowSize(1, 1);
+    Console.SetBufferSize(self.SizeX, self.SizeY);
+    Console.SetWindowSize(Console.MaxWidth, Console.MaxHeight);
+  end
+  else Console.SetSize(self.SizeX, self.SizeY);
 end;
+function SetSize(self: string): DrawBoxBlock; extensionmethod := Drawing.BitMapToDrawBoxBlock(self).SetSize;
+function SetSize(self: string; ct: RGBToColorConvertType): DrawBoxBlock; extensionmethod := Drawing.BitMapToDrawBoxBlock(ct, self).SetSize;
 
 ///Рисует текущий объект в консоли типом рисования Dt с позиции (x, y) и параметром наложения isoverlay
 procedure Draw(self: DrawBoxBlock; Dt: DrawingType; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(self, Dt, x, y, isoverlay);
@@ -2150,6 +2224,73 @@ procedure Draw(self: DrawBoxBlock; isoverlay: boolean); extensionmethod := Drawi
 
 ///Рисует текущий объект в консоли со всеми стандартными значениями
 procedure Draw(self: DrawBoxBlock); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
+
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x, y: integer; isoverlay: boolean) := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), dt, x, y, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, x.Item1, x.Item2, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, x, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, x, y, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod;
+begin
+  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self);
+  Drawing.Draw(dbx, Dt, Drawing.GetStartPos(dbx,At),isoverlay);
+end;
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; At: DrawingAlignmentType); extensionmethod;
+begin
+  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self);
+  Drawing.Draw(dbx, Dt, Drawing.GetStartPos(dbx, At), Drawing._DefaultIsOverlay);
+end;
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, Drawing._DefaultAlignmentType, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, x, y, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, x.Item1, x.Item2, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, x, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, x, y, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod;
+begin
+  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self);
+  Drawing.Draw(dbx, Drawing._DefaultDrawingType, Drawing.GetStartPos(dbx,At),isoverlay);
+end;
+procedure Draw(self: string; ct: RGBToColorConvertType; At: DrawingAlignmentType); extensionmethod;
+begin
+  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self);
+  Drawing.Draw(dbx, Drawing._DefaultDrawingType, Drawing.GetStartPos(dbx,At), Drawing._DefaultIsOverlay);
+end;
+procedure Draw(self: string; ct: RGBToColorConvertType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, Drawing._DefaultAlignmentType, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
+
+procedure Draw(self: string; Dt: DrawingType; x, y: integer; isoverlay: boolean) := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), dt, x, y, isoverlay);
+procedure Draw(self: string; Dt: DrawingType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, x.Item1, x.Item2, isoverlay);
+procedure Draw(self: string; Dt: DrawingType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, x, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; Dt: DrawingType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, x, y, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod;
+begin
+  var dbx := Drawing.BitMapToDrawBoxBlock(self);
+  Drawing.Draw(dbx, Dt, Drawing.GetStartPos(dbx,At),isoverlay);
+end;
+procedure Draw(self: string; Dt: DrawingType; At: DrawingAlignmentType); extensionmethod;
+begin
+  var dbx := Drawing.BitMapToDrawBoxBlock(self);
+  Drawing.Draw(dbx, Dt, Drawing.GetStartPos(dbx, At), Drawing._DefaultIsOverlay);
+end;
+procedure Draw(self: string; Dt: DrawingType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, Drawing._DefaultAlignmentType, isoverlay);
+procedure Draw(self: string; Dt: DrawingType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, x, y, isoverlay);
+procedure Draw(self: string; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, x.Item1, x.Item2, isoverlay);
+procedure Draw(self: string; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, x, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, x, y, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod;
+begin
+  var dbx := Drawing.BitMapToDrawBoxBlock(self);
+  Drawing.Draw(dbx, Drawing._DefaultDrawingType, Drawing.GetStartPos(dbx,At),isoverlay);
+end;
+procedure Draw(self: string; At: DrawingAlignmentType); extensionmethod;
+begin
+  var dbx := Drawing.BitMapToDrawBoxBlock(self);
+  Drawing.Draw(dbx, Drawing._DefaultDrawingType, Drawing.GetStartPos(dbx,At), Drawing._DefaultIsOverlay);
+end;
+procedure Draw(self: string; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, Drawing._DefaultAlignmentType, isoverlay);
+procedure Draw(self: string); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
+
 
 type
   ///Представляет методы для вывода последовательностей DrawBoxBlock'ов
