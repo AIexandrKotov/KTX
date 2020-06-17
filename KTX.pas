@@ -1653,26 +1653,25 @@ type
       MasterContext.Add(' ', 0);
       MasterContext.Add('.', 0.06);
       MasterContext.Add(':', 0.13);
-      MasterContext.Add(';', 0.19);
-      MasterContext.Add('░', 0.26);
-      MasterContext.Add('t', 0.32);
-      MasterContext.Add('S', 0.39);
-      MasterContext.Add('0', 0.45);
-      MasterContext.Add('X', 0.52);
-      MasterContext.Add('8', 0.58);
-      MasterContext.Add('▒', 0.65);
-      MasterContext.Add('#', 0.71);
-      MasterContext.Add('&', 0.78);
-      MasterContext.Add('%', 0.84);
-      MasterContext.Add('@', 0.93);
-      MasterContext.Add('▓', 1);
+      //MasterContext.Add(';', 0.16);
+      MasterContext.Add('%', 0.21);
+      MasterContext.Add('t', 0.29);
+      //MasterContext.Add('S', 0.32);
+      MasterContext.Add('░', 0.33);
+      //MasterContext.Add('X', 0.35);
+      MasterContext.Add('8', 0.4);
+      //MasterContext.Add('&', 0.41);
+      //MasterContext.Add('@', 0.42);
+      MasterContext.Add('#', 0.44);
+      MasterContext.Add('▒', 0.5);
+      MasterContext.Add('▓', 0.66);
       MasterColors := FillColors(MasterContext);
       
       var EstheticContext: Dictionary<char, single> := new Dictionary<char, single>();
       EstheticContext.Add(' ', 0);
-      EstheticContext.Add('░', 0.25);
+      EstheticContext.Add('░', 0.33);
       EstheticContext.Add('▒', 0.5);
-      EstheticContext.Add('▓', 0.75);
+      EstheticContext.Add('▓', 0.66);
       Esthetic1024Colors := FillColors(EstheticContext);
     end;
     
@@ -1867,7 +1866,7 @@ type
     ///Символы вывода
     public const Context = ' .:;t08SX%&#@░▒▓';
     
-    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.Esthetic1024;
+    private static _RGBConvertingType: RGBToColorConvertType := RGBToColorConvertType.Master;
     private static _DefaultAlignmentType: DrawingAlignmentType := DrawingAlignmentType.Center;
     private static _DefaultIsOverlay := false;
     private static _DefaultDrawingType: DrawingType := DrawingType.Aline;
@@ -1927,22 +1926,24 @@ type
       var locker := new object;
       var Colors := new List<System.Drawing.Color>;
       
+      Result.BackgroundAvailable := true;
       for var i:=0 to (b.Width)*(b.Height) - 2 do
       begin
         var xx := i mod b.Width;
         var yy := i div b.Width;
-        Colors += b.GetPixel(xx,yy);
+        var currentcolor := b.GetPixel(xx,yy);
+        Colors += currentcolor;
+        if (currentcolor.A = 0) then
+        begin
+          Result.BackgroundAvailable := false;
+          break;
+        end;
       end;
       
-      if (Colors.Any(x -> x.A = 0)) then
-      begin
-        Result.BackgroundAvailable := false;
-      end
-      else
+      if (Result.BackgroundAvailable) then
       begin
         var bgrnd0 := System.Drawing.Color.FromArgb(Colors.GroupBy(x -> x.ToArgb).MaxBy(x -> x.Count).Key);
         Result.Background := RGBConsole.RGBToColor(converttype, bgrnd0.R, bgrnd0.G, bgrnd0.B);
-        Result.BackgroundAvailable := true;
       end;
       
       var bgrnd := Result.Background; //issue #2136
@@ -2166,6 +2167,22 @@ type
 function SetSize(self: DrawBoxBlock): DrawBoxBlock; extensionmethod;
 begin
   Result := self;
+  if (self.SizeX > Console.MaxWidth) xor (self.SizeY > Console.MaxHeight) then
+  begin
+    if (self.SizeX > Console.MaxWidth) then
+    begin
+      Console.SetWindowSize(1, 1);
+      Console.SetBufferSize(self.SizeX, self.SizeY);
+      Console.SetWindowSize(Console.MaxWidth, self.SizeY);
+    end
+    else if (self.SizeY > Console.MaxHeight) then
+    begin
+      Console.SetWindowSize(1, 1);
+      Console.SetBufferSize(self.SizeX, self.SizeY);
+      Console.SetWindowSize(self.SizeX, Console.MaxHeight);
+    end;
+  end
+  else
   if (self.SizeX > Console.MaxWidth) or (self.SizeY > Console.MaxHeight) then
   begin
     Console.SetWindowSize(1, 1);
