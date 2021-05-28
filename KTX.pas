@@ -390,33 +390,29 @@ type
         if res.Length + w.Length < x then
           res.Append(w) else
         begin
-          //yield res.ToString; TODO
+          yield res.ToString;
           res.Clear;
           res.Append(nw);
         end;
       end;
       if res.Length <> 0 then
-        //yield res.ToString; TODO
+        yield res.ToString;
     end;
     
     private static function SizeSeparateSun(x: integer; s: string): sequence of string;
     begin
       Result := SizeSeparateSun(x, new string[](s));
     end;
-  
-    private static _separatetype: SeparateType := SeparateType.ListMethod;
-    
-    private static procedure SetSizeSeparateType(a: SeparateType) := _separatetype := a;
     
     ///Возвращает или задаёт тип разделения текста по строкам
-    public static property SizeSeparateType: SeparateType read _separatetype write SetSizeSeparateType;
+    public static auto property SizeSeparateType: SeparateType;
     
     ///Возвращает последовательность строк, разделённых по заданной длине способом переноса t
     public static function SizeSeparate(t: SeparateType; x: integer; params s: array of string): sequence of string;
     begin
       case t of
         SeparateType.ListMethod: Result := SizeSeparateMy(x, s);
-        //SeparateType.SunMethod: Result := SizeSeparateSun(x, s);
+        SeparateType.SunMethod: Result := SizeSeparateSun(x, s);
         else raise new System.Exception;
       end;
     end;
@@ -428,13 +424,13 @@ type
     public static function SizeSeparateWSpaces(t: SeparateType; params s: array of string) := SizeSeparate(t, _width - 2, s);
     
     ///Возвращает последовательность строк, разделённых по заданной длине стандартным способом переноса
-    public static function SizeSeparate(x: integer; params s: array of string): sequence of string := SizeSeparate(_separatetype, x, s);
+    public static function SizeSeparate(x: integer; params s: array of string): sequence of string := SizeSeparate(SizeSeparateType, x, s);
     
     ///Возвращает последовательность строк, разделённых по ширине консоли стандартным способом переноса
-    public static function SizeSeparate(params s: array of string): sequence of string := SizeSeparate(_separatetype, _width, s);
+    public static function SizeSeparate(params s: array of string): sequence of string := SizeSeparate(SizeSeparateType, _width, s);
     
     ///Возвращает последовательность строк, разделённых по ширине консоли с отступами по краям стандартным способом переноса
-    public static function SizeSeparateWSpaces(params s: array of string): sequence of string := SizeSeparate(_separatetype, _width - 2, s);
+    public static function SizeSeparateWSpaces(params s: array of string): sequence of string := SizeSeparate(SizeSeparateType, _width - 2, s);
   end;
   
   ///Представляет класс псевдоокна
@@ -443,7 +439,6 @@ type
     private const Zero: integer = integer.MinValue;
     ///--
     private const Null: string = '';
-  
     ///--
     private _input: string;
     ///--
@@ -1108,31 +1103,31 @@ function SizeSeparateWSpaces(self: array of string; t: SeparateType): sequence o
 function SizeSeparateWSpaces(self: string; t: SeparateType): sequence of string; extensionmethod := Console.SizeSeparate(t, Console._width - 2, self);
 
 ///Возвращает последовательность строк, разделённых по заданной длине стандартным способом переноса
-function SizeSeparate(x: integer; params s: array of string) := Console.SizeSeparate(Console._separatetype, x, s);
+function SizeSeparate(x: integer; params s: array of string) := Console.SizeSeparate(Console.SizeSeparateType, x, s);
 
 ///Возвращает последовательность строк, разделённых по заданной длине стандартным способом переноса
-function SizeSeparate(self: array of string; x: integer): sequence of string; extensionmethod := Console.SizeSeparate(Console._separatetype, x, self);
+function SizeSeparate(self: array of string; x: integer): sequence of string; extensionmethod := Console.SizeSeparate(Console.SizeSeparateType, x, self);
 
 ///Возвращает последовательность строк, разделённых по заданной длине стандартным способом переноса
-function SizeSeparate(self: string; x: integer): sequence of string; extensionmethod := Console.SizeSeparate(Console._separatetype, x, self);
+function SizeSeparate(self: string; x: integer): sequence of string; extensionmethod := Console.SizeSeparate(Console.SizeSeparateType, x, self);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли стандартным способом переноса
-function SizeSeparate(params s: array of string) := Console.SizeSeparate(Console._separatetype, Console._width, s);
+function SizeSeparate(params s: array of string) := Console.SizeSeparate(Console.SizeSeparateType, Console._width, s);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли стандартным способом переноса
-function SizeSeparate(self: array of string): sequence of string; extensionmethod := Console.SizeSeparate(Console._separatetype, Console._width, self);
+function SizeSeparate(self: array of string): sequence of string; extensionmethod := Console.SizeSeparate(Console.SizeSeparateType, Console._width, self);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли стандартным способом переноса
-function SizeSeparate(self: string): sequence of string; extensionmethod := Console.SizeSeparate(Console._separatetype, Console._width, self);
+function SizeSeparate(self: string): sequence of string; extensionmethod := Console.SizeSeparate(Console.SizeSeparateType, Console._width, self);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли с отступами по краям стандартным способом переноса
-function SizeSeparateWSpaces(params s: array of string) := Console.SizeSeparate(Console._separatetype, Console._width - 2, s);
+function SizeSeparateWSpaces(params s: array of string) := Console.SizeSeparate(Console.SizeSeparateType, Console._width - 2, s);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли с отступами по краям стандартным способом переноса
-function SizeSeparateWSpaces(self: array of string): sequence of string; extensionmethod := Console.SizeSeparate(Console._separatetype, Console._width - 2, self);
+function SizeSeparateWSpaces(self: array of string): sequence of string; extensionmethod := Console.SizeSeparate(Console.SizeSeparateType, Console._width - 2, self);
 
 ///Возвращает последовательность строк, разделённых по ширине консоли с отступами по краям стандартным способом переноса
-function SizeSeparateWSpaces(self: string): sequence of string; extensionmethod := Console.SizeSeparate(Console._separatetype, Console._width - 2, self);
+function SizeSeparateWSpaces(self: string): sequence of string; extensionmethod := Console.SizeSeparate(Console.SizeSeparateType, Console._width - 2, self);
 
 ///Выводит последовательность строк, полученных методом SizeSeparateWSpaces, начиная со строки y
 ///Возвращает саму последовательность
@@ -2242,71 +2237,71 @@ procedure Draw(self: DrawBoxBlock; isoverlay: boolean); extensionmethod := Drawi
 ///Рисует текущий объект в консоли со всеми стандартными значениями
 procedure Draw(self: DrawBoxBlock); extensionmethod := Drawing.Draw(self, Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
 
-procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x, y: integer; isoverlay: boolean) := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), dt, x, y, isoverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, x.Item1, x.Item2, isoverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, x, Drawing._DefaultIsOverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, x, y, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x, y: integer; isoverlay: boolean) := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), dt, x, y, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Dt, x.Item1, x.Item2, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Dt, x, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Dt, x, y, Drawing._DefaultIsOverlay);
 procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod;
 begin
-  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self);
+  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self).SetSize();
   Drawing.Draw(dbx, Dt, Drawing.GetStartPos(dbx,At),isoverlay);
 end;
 procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; At: DrawingAlignmentType); extensionmethod;
 begin
-  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self);
+  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self).SetSize();
   Drawing.Draw(dbx, Dt, Drawing.GetStartPos(dbx, At), Drawing._DefaultIsOverlay);
 end;
-procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, Drawing._DefaultAlignmentType, isoverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Dt, Drawing._DefaultIsOverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, x, y, isoverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, x.Item1, x.Item2, isoverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, x, Drawing._DefaultIsOverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, x, y, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Dt, Drawing._DefaultAlignmentType, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; Dt: DrawingType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Dt, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Drawing._DefaultDrawingType, x, y, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Drawing._DefaultDrawingType, x.Item1, x.Item2, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Drawing._DefaultDrawingType, x, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Drawing._DefaultDrawingType, x, y, Drawing._DefaultIsOverlay);
 procedure Draw(self: string; ct: RGBToColorConvertType; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod;
 begin
-  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self);
+  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self).SetSize();
   Drawing.Draw(dbx, Drawing._DefaultDrawingType, Drawing.GetStartPos(dbx,At),isoverlay);
 end;
 procedure Draw(self: string; ct: RGBToColorConvertType; At: DrawingAlignmentType); extensionmethod;
 begin
-  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self);
+  var dbx := Drawing.BitMapToDrawBoxBlock(ct, self).SetSize();
   Drawing.Draw(dbx, Drawing._DefaultDrawingType, Drawing.GetStartPos(dbx,At), Drawing._DefaultIsOverlay);
 end;
-procedure Draw(self: string; ct: RGBToColorConvertType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, Drawing._DefaultAlignmentType, isoverlay);
-procedure Draw(self: string; ct: RGBToColorConvertType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self), Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Drawing._DefaultDrawingType, Drawing._DefaultAlignmentType, isoverlay);
+procedure Draw(self: string; ct: RGBToColorConvertType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(ct, self).SetSize(), Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
 
-procedure Draw(self: string; Dt: DrawingType; x, y: integer; isoverlay: boolean) := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), dt, x, y, isoverlay);
-procedure Draw(self: string; Dt: DrawingType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, x.Item1, x.Item2, isoverlay);
-procedure Draw(self: string; Dt: DrawingType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, x, Drawing._DefaultIsOverlay);
-procedure Draw(self: string; Dt: DrawingType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, x, y, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; Dt: DrawingType; x, y: integer; isoverlay: boolean) := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), dt, x, y, isoverlay);
+procedure Draw(self: string; Dt: DrawingType; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Dt, x.Item1, x.Item2, isoverlay);
+procedure Draw(self: string; Dt: DrawingType; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Dt, x, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; Dt: DrawingType; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Dt, x, y, Drawing._DefaultIsOverlay);
 procedure Draw(self: string; Dt: DrawingType; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod;
 begin
-  var dbx := Drawing.BitMapToDrawBoxBlock(self);
+  var dbx := Drawing.BitMapToDrawBoxBlock(self).SetSize();
   Drawing.Draw(dbx, Dt, Drawing.GetStartPos(dbx,At),isoverlay);
 end;
 procedure Draw(self: string; Dt: DrawingType; At: DrawingAlignmentType); extensionmethod;
 begin
-  var dbx := Drawing.BitMapToDrawBoxBlock(self);
+  var dbx := Drawing.BitMapToDrawBoxBlock(self).SetSize();
   Drawing.Draw(dbx, Dt, Drawing.GetStartPos(dbx, At), Drawing._DefaultIsOverlay);
 end;
-procedure Draw(self: string; Dt: DrawingType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, Drawing._DefaultAlignmentType, isoverlay);
-procedure Draw(self: string; Dt: DrawingType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Dt, Drawing._DefaultIsOverlay);
-procedure Draw(self: string; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, x, y, isoverlay);
-procedure Draw(self: string; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, x.Item1, x.Item2, isoverlay);
-procedure Draw(self: string; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, x, Drawing._DefaultIsOverlay);
-procedure Draw(self: string; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, x, y, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; Dt: DrawingType; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Dt, Drawing._DefaultAlignmentType, isoverlay);
+procedure Draw(self: string; Dt: DrawingType); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Dt, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; x, y: integer; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Drawing._DefaultDrawingType, x, y, isoverlay);
+procedure Draw(self: string; x: (integer, integer); isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Drawing._DefaultDrawingType, x.Item1, x.Item2, isoverlay);
+procedure Draw(self: string; x: (integer, integer)); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Drawing._DefaultDrawingType, x, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; x, y: integer); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Drawing._DefaultDrawingType, x, y, Drawing._DefaultIsOverlay);
 procedure Draw(self: string; At: DrawingAlignmentType; isoverlay: boolean); extensionmethod;
 begin
-  var dbx := Drawing.BitMapToDrawBoxBlock(self);
+  var dbx := Drawing.BitMapToDrawBoxBlock(self).SetSize();
   Drawing.Draw(dbx, Drawing._DefaultDrawingType, Drawing.GetStartPos(dbx,At),isoverlay);
 end;
 procedure Draw(self: string; At: DrawingAlignmentType); extensionmethod;
 begin
-  var dbx := Drawing.BitMapToDrawBoxBlock(self);
+  var dbx := Drawing.BitMapToDrawBoxBlock(self).SetSize();
   Drawing.Draw(dbx, Drawing._DefaultDrawingType, Drawing.GetStartPos(dbx,At), Drawing._DefaultIsOverlay);
 end;
-procedure Draw(self: string; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, Drawing._DefaultAlignmentType, isoverlay);
-procedure Draw(self: string); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self), Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
+procedure Draw(self: string; isoverlay: boolean); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Drawing._DefaultDrawingType, Drawing._DefaultAlignmentType, isoverlay);
+procedure Draw(self: string); extensionmethod := Drawing.Draw(Drawing.BitMapToDrawBoxBlock(self).SetSize(), Drawing._DefaultDrawingType, Drawing._DefaultIsOverlay);
 
 
 type
