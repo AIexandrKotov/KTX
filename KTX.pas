@@ -1960,13 +1960,20 @@ type
       
       if (b.PixelFormat = System.Drawing.Imaging.PixelFormat.Format24bppRgb) then
       begin
-        Parallel.For(0, (argbValues.Length - 1) div 3, i ->
-        begin
-          var xx := i mod width;
-          var yy := i div width;
-          var currentcolor := System.Drawing.Color.FromArgb(argbValues[i * 3 + 2], argbValues[i * 3 + 1], argbValues[i * 3]);
-          lock (locker) do socolors += new System.ValueTuple<System.Drawing.Color, integer, integer>(currentcolor, xx, yy);
-        end);
+        // непонятные смещения для Format24bppRgb, поэтому возвращаю костыль, но только для 24bpp
+        for var i := 0 to width - 1 do
+          for var j := 0 to b.Height - 1 do
+          begin
+            socolors += new System.ValueTuple<System.Drawing.Color, integer, integer>(b.GetPixel(i, j), i, j); 
+          end;
+          
+//        Parallel.For(0, (argbValues.Length - 1) div 3, i ->
+//        begin
+//          var xx := i mod width;
+//          var yy := i div width;
+//          var currentcolor := System.Drawing.Color.FromArgb(argbValues[i * 3 + 2], argbValues[i * 3 + 1], argbValues[i * 3]);
+//          lock (locker) do socolors += new System.ValueTuple<System.Drawing.Color, integer, integer>(currentcolor, xx, yy);
+//        end);
       end
       else if (b.PixelFormat = System.Drawing.Imaging.PixelFormat.Format32bppArgb) then
       begin
