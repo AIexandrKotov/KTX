@@ -1172,7 +1172,7 @@ type
     ///Консольный цвет данного цвета
     public ConsoleColor: Color;
     
-    private constructor := exit;
+    //private constructor := exit;
     
     public constructor (r, g, b: byte; c: Color);
     begin
@@ -1200,7 +1200,7 @@ type
   );
   
   ///Представляет клетку консоли
-  DrawBox = class
+  DrawBox = class(IComparable<DrawBox>)
     ///Положение клетки по X (ширине)
     public PosX: integer;
     ///Положение клетки по Y (высоте)
@@ -1222,6 +1222,15 @@ type
       Symbol:=c;
     end;
     
+    public function CompareTo(other: DrawBox): integer;
+    begin
+      if (other = nil) then 
+      begin
+        Result := 1;
+      end
+      else Result := ((PosY * 100000) + PosX) - ((other.PosY * 100000) + other.PosX);
+    end;
+    
     //public static function Parse(s: string): DrawBox := new DrawBox(s);
     
     ///Возвращает строковое представление текущего экземпляра класса
@@ -1237,7 +1246,7 @@ type
     end;
   end;
   
-  ColorBox = class
+  ColorBox = record
     public R, G, B: integer;
     public Back, Fore: Color;
     public Symbol: char;
@@ -1618,13 +1627,26 @@ type
     
     public static function FillColors(context: Dictionary<char, single>): array of ColorBox;
     begin
-      Result := new ColorBox[(16*16)*context.Count];
-      var cnt := 0;
+      //Result := new ColorBox[(16*16)*context.Count];
+      var lst := new List<ColorBox>(16 * 16 * context.Count);
+      for var i := 0 to 15 do
+      begin
+        var current := new ColorBox();
+        current.Symbol := ' ';
+        current.Back := Color(i);
+        current.Fore := Color.Black;
+        var gc := GetARGB(current.Back);
+        current.R := gc.Item1;
+        current.G := gc.Item2;
+        current.B := gc.Item3;
+        lst.Add(current);
+      end;
+      
       for var i := 0 to 15 do
       begin
         for var j := 0 to 15 do
         begin
-          //if (i = j) then continue;
+          if (i = j) then continue;
           foreach var x in context do
           begin
             var current := new ColorBox();
@@ -1635,17 +1657,19 @@ type
             current.R := mx.Item1;
             current.G := mx.Item2;
             current.B := mx.Item3;
-            Result[cnt] := current;
-            cnt += 1;
+            if (not lst.Any(x -> (x.R - current.R)**2 + (x.G - current.G)**2 + (x.B - current.B)**2 = 0)) then lst.Add(current);
+            //Result[cnt] := current;
+            //cnt += 1;
           end;
         end;
       end;
+      Result := lst.ToArray();
     end;
     
     static constructor;
     begin
       var MasterContext: Dictionary<char, single> := new Dictionary<char, single>();
-      MasterContext.Add(' ', 0);
+      //MasterContext.Add(' ', 0);
       MasterContext.Add('.', 0.06);
       MasterContext.Add(':', 0.13);
       //MasterContext.Add(';', 0.16);
@@ -1663,7 +1687,7 @@ type
       MasterColors := FillColors(MasterContext);
       
       var EstheticContext: Dictionary<char, single> := new Dictionary<char, single>();
-      EstheticContext.Add(' ', 0);
+      //EstheticContext.Add(' ', 0);
       EstheticContext.Add('░', 0.33);
       EstheticContext.Add('▒', 0.5);
       EstheticContext.Add('▓', 0.66);
@@ -1681,6 +1705,7 @@ type
         begin
           absi := i;
           abssum := currentabssum;
+          if (abssum < 2) then break;
         end;
       end;
       Result := colors[absi];
@@ -1866,9 +1891,6 @@ type
     private static _DefaultIsOverlay := false;
     private static _DefaultDrawingType: DrawingType := DrawingType.Aline;
     
-    ///Возвращает или задаёт значение, определяющее будет ли проводиться многопоточная конвертация картинки. Конвертация в 3 раза быстрее, вывод в 2-3 раза медленнее
-    public static auto property MulthThreadConvert: boolean := false;
-    
     ///Возвращает или задаёт стандартную конвертацию цвета
     public static property RGBConvertingType: RGBToColorConvertType read _RGBConvertingType write _RGBConvertingType := value;
     
@@ -1901,9 +1923,12 @@ type
       end
       else
       begin
-        var fnd := RGBConsole.Find(converttype, r, g, b);
-        Result := fnd.ToDrawBox(x, y);
-        if (bga) and RGBConsole.ColorEquality(bg,r,g,b) then Result.Symbol := 'T';
+        if (bga) and RGBConsole.ColorEquality(bg,r,g,b) then Result := nil
+        else
+        begin
+          var fnd := RGBConsole.Find(converttype, r, g, b);
+          Result := fnd.ToDrawBox(x, y);
+        end;
       end;
       
     end;
@@ -1911,72 +1936,71 @@ type
     ///Преобразует файл-рисунок в экземпляр класса DrawBoxBlock используя переданный тип конвертации
     public static function BitMapToDrawBoxBlock(converttype: RGBToColorConvertType; bmpname: string): DrawBoxBlock;
     begin
+      var Draws := new List<DrawBox>;
+      var locker := new object;
       var b := new Bitmap(bmpname);
       
       Result := new DrawBoxBlock();
       Result.SizeX := b.Width;
       Result.SizeY := b.Height;
       
-      var Draws := new List<DrawBox>;
-      var locker := new object;
-      var Colors := new List<System.Drawing.Color>;
+      var width := b.Width;
       
-      Result.BackgroundAvailable := true;
-      for var i:=0 to (b.Width)*(b.Height) - 2 do
+      var rect := new Rectangle(0, 0, Result.SizeX, Result.SizeY);
+      var bdata := b.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite, b.PixelFormat);
+      var ptr := bdata.Scan0;
+      var bytes := System.Math.Abs(bdata.Stride) * Result.SizeY;
+      var argbValues := new byte[bytes];
+      var socolors := new List<System.ValueTuple<System.Drawing.Color, integer, integer>>;
+      
+      System.Runtime.InteropServices.Marshal.Copy(ptr, argbValues, 0, bytes);
+      b.UnlockBits(bdata);
+      
+      var bga := true;
+      
+      if (b.PixelFormat = System.Drawing.Imaging.PixelFormat.Format24bppRgb) then
       begin
-        var xx := i mod b.Width;
-        var yy := i div b.Width;
-        var currentcolor := b.GetPixel(xx,yy);
-        Colors += currentcolor;
-        if (currentcolor.A = 0) then
+        Parallel.For(0, (argbValues.Length - 1) div 3, i ->
         begin
-          Result.BackgroundAvailable := false;
-          break;
-        end;
+          var xx := i mod width;
+          var yy := i div width;
+          var currentcolor := System.Drawing.Color.FromArgb(argbValues[i * 3 + 2], argbValues[i * 3 + 1], argbValues[i * 3]);
+          lock (locker) do socolors += new System.ValueTuple<System.Drawing.Color, integer, integer>(currentcolor, xx, yy);
+        end);
+      end
+      else if (b.PixelFormat = System.Drawing.Imaging.PixelFormat.Format32bppArgb) then
+      begin
+        Parallel.For(0, (argbValues.Length - 1) div 4, i ->
+        begin
+          var xx := i mod width;
+          var yy := i div width;
+          var currentcolor := System.Drawing.Color.FromArgb(argbValues[i * 4 + 3], argbValues[i * 4 + 2], argbValues[i * 4 + 1], argbValues[i * 4]);
+          if (currentcolor.A = 0) then
+          begin
+            bga := false;
+            exit;
+          end;
+          lock (locker) do socolors += new System.ValueTuple<System.Drawing.Color, integer, integer>(currentcolor, xx, yy);
+        end);
       end;
       
-      if (Result.BackgroundAvailable) then
+      if (bga) then
       begin
-        var bgrnd0 := System.Drawing.Color.FromArgb(Colors.GroupBy(x -> x.ToArgb).MaxBy(x -> x.Count).Key);
+        Result.BackgroundAvailable := true;
+        var bgrnd0 := System.Drawing.Color.FromArgb(socolors.Select(x -> x.Item1).GroupBy(x -> x.ToArgb).MaxBy(x -> x.Count).Key);
         Result.Background := RGBConsole.RGBToColor(converttype, bgrnd0.R, bgrnd0.G, bgrnd0.B);
       end;
       
       var bgrnd := Result.Background; //issue #2136
-      var bga := Result.BackgroundAvailable; //issue #2136
       
-      if (MulthThreadConvert) then
+      Parallel.For(0, socolors.Count - 2, i ->
       begin
-        Parallel.For(0, (b.Width)*(b.Height) - 1, i ->
-        begin
-          var xx, yy: integer;
-          var cc: System.Drawing.Color;
-          lock b do
-          begin
-            xx := i mod b.Width;
-            yy := i div b.Width;
-            cc := b.GetPixel(xx,yy);
-          end;
-          if (cc.A = 0) then exit;
-          var dbx := ARGBPixelToDrawBox(converttype, xx,yy, bga, bgrnd, cc.A, cc.R, cc.G, cc.B);
-          if (dbx = nil) or (dbx.Symbol = 'T') then exit;
-          lock locker do Draws.Add(dbx);
-        end);
-      end
-      else
-      begin
-        for var i:=0 to (b.Width)*(b.Height) - 2 do
-        begin
-          var xx := i mod b.Width;
-          var yy := i div b.Width;
-          var cc := b.GetPixel(xx,yy);
-          if (cc.A = 0) then continue;
-          var dbx := ARGBPixelToDrawBox(converttype, xx,yy, bga, bgrnd, cc.A, cc.R, cc.G, cc.B);
-          if (dbx = nil) or (dbx.Symbol = 'T') then continue;
-          lock locker do Draws.Add(dbx);
-        end;
-      end;
+        var dbx := ARGBPixelToDrawBox(converttype, socolors[i].Item2, socolors[i].Item3, bga, bgrnd, socolors[i].Item1.A, socolors[i].Item1.R, socolors[i].Item1.G, socolors[i].Item1.B);
+        if (dbx = nil) then exit;
+        lock (locker) do Draws.Add(dbx);
+      end);
+      Draws.Sort();
       
-      var lst := Draws.ToList.RemoveAll(x -> (x = nil) or (x.Symbol = 'T'));
       Result.Draws := Draws.ToArray;
       
       b.Dispose;
